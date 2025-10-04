@@ -32,7 +32,7 @@ router.put(
 );
 
 router.delete(
-  '/deleteplugin/:id',
+  '/deleteplugins/:id',
   authMiddleware(),
   pluginController.deletePlugin
 );
@@ -46,6 +46,8 @@ router.post(
   upload.single('file'), // nhận file từ input name="file"
   pluginController.uploadFile
 );
+
+router.get('/:id/purchased', authMiddleware(), pluginController.checkPurchased);
 
 router.get('/download/:id', authMiddleware(), pluginController.downloadPlugin);
 

@@ -3,19 +3,58 @@ import ReactMarkdown from 'react-markdown';
 import { FaDownload } from 'react-icons/fa';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
+import PaymentPage from './PaymentPage';
+import { AuthContext } from '../contexts/AuthContext';
 
 function PluginDetails() {
+  const { token, user } = useContext(AuthContext);
   const [plugin, setPlugin] = useState({});
   const { id } = useParams();
   const isUserLoggedIn = !!localStorage.getItem('token');
+  const [checkout, setCheckout] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+  const [orderId, setOrderId] = useState(null);
+  const [purchased, setPurchased] = useState(false);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/plugins/fetchplugin/${id}`)
-      .then((res) => res.json())
-      .then(setPlugin)
-      .catch((err) => console.error('Error fetching plugin details:', err));
+    const fetchPlugin = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:4000/api/plugins/fetchplugin/${id}`
+        );
+        if (!res.ok) throw new Error('Failed to fetch plugin');
+        const data = await res.json();
+        setPlugin(data || {}); // lấy plugin từ response
+      } catch (err) {
+        console.error('Error fetching plugin details:', err);
+      }
+    };
+    fetchPlugin();
   }, [id]);
+
+  useEffect(() => {
+    const checkPurchased = async () => {
+      if (!token) return;
+
+      try {
+        const res = await fetch(
+          `http://localhost:4000/api/plugins/${id}/purchased`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error('Failed to check purchase');
+        const data = await res.json();
+        setPurchased(data.purchased); // true/false
+      } catch (err) {
+        console.error('Error checking purchase:', err);
+      }
+    };
+
+    checkPurchased();
+  }, [id, token]);
 
   const handleDownload = async (id, name) => {
     try {
@@ -23,23 +62,71 @@ function PluginDetails() {
         `http://localhost:4000/api/plugins/download/${id}`,
         {
           method: 'GET',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         }
       );
+      if (!res.ok) throw new Error('Download failed');
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name}.zip`; // đặt tên file khi tải
+      a.download = `${name}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
     } catch (err) {
       console.error('Download failed:', err);
+      alert(err.message);
     }
   };
+
+  const handlePayment = async () => {
+    if (!token || !user) return;
+
+    if (Number(plugin.price) === 0) {
+      // Plugin Free, chỉ download
+      handleDownload(plugin.id, plugin.name);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        'http://localhost:4000/api/payment/create-payment-intent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            products: [
+              {
+                pluginId: plugin.id,
+                name: plugin.name,
+                price: Number(plugin.price),
+              },
+            ],
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to create payment intent');
+      const data = await res.json();
+      setClientSecret(data.clientSecret);
+      setOrderId(data.orderId);
+      setCheckout(true);
+    } catch (err) {
+      console.error(err);
+      alert('Payment initiation failed: ' + err.message);
+    }
+  };
+
+  // Nếu đang checkout, render trang Payment
+  if (checkout && clientSecret && orderId) {
+    return <PaymentPage clientSecret={clientSecret} orderId={orderId} />;
+  }
 
   const handleAddToCart = async () => {
     try {
@@ -49,25 +136,25 @@ function PluginDetails() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
-        body: JSON.stringify({ pluginId: Number(id) }), // ép kiểu sang số
+        body: JSON.stringify({ pluginId: Number(id) }),
       });
 
-      const data = await res.json(); // luôn parse JSON để biết backend trả gì
+      const data = await res.json();
 
       if (res.ok) {
         alert('✅ Added to cart!');
       } else {
         alert('❌ Error: ' + (data.message || 'Unknown error'));
       }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
       alert('⚠️ Failed to add to cart, please try again.');
     }
   };
 
-  const averageRating = plugin.reviews?.length
-    ? plugin.reviews.reduce((sum, r) => sum + r.stars, 0) /
-      plugin.reviews.length
+  const reviews = plugin.reviews || [];
+  const averageRating = reviews.length
+    ? reviews.reduce((sum, r) => sum + r.stars, 0) / reviews.length
     : 0;
 
   return (
@@ -109,31 +196,47 @@ function PluginDetails() {
 
           <p className="text-gray-600 mb-2">
             <strong>Price:</strong>{' '}
-            {plugin.price === 0 ? 'Free' : `$${plugin.price}`}
+            {Number(plugin.price) === 0 ? 'Free' : `$${plugin.price}`}
           </p>
 
           <p className="text-yellow-500 mb-2">
-            {'★'.repeat(Math.round(plugin.rating || 0))} (
-            {(plugin.rating || 0).toFixed(1)})
+            {'★'.repeat(Math.round(averageRating))} ({averageRating.toFixed(1)})
           </p>
 
           <div className="flex items-center mb-4">
             {isUserLoggedIn ? (
               <>
-                <button
-                  onClick={() => handleDownload(plugin.id, plugin.name)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
-                >
-                  <FaDownload />
-                  Download
-                </button>
+                {purchased ? (
+                  <button
+                    onClick={() => handleDownload(plugin.id, plugin.name)}
+                    className="bg-green-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
+                  >
+                    <FaDownload /> Download
+                  </button>
+                ) : Number(plugin.price) === 0 ? (
+                  <button
+                    onClick={() => handleDownload(plugin.id, plugin.name)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
+                  >
+                    <FaDownload /> Download
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePayment}
+                    className="bg-blue-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
+                  >
+                    {plugin.price} $
+                  </button>
+                )}
 
-                <button
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
-                  onClick={handleAddToCart}
-                >
-                  Add to Cart
-                </button>
+                {!purchased && (
+                  <button
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                    onClick={handleAddToCart}
+                  >
+                    Add to Cart
+                  </button>
+                )}
               </>
             ) : (
               <Link
@@ -163,12 +266,12 @@ function PluginDetails() {
         <div className="bg-white p-6 col-span-1 md:col-span-2">
           <h2 className="text-xl font-bold mb-4">Reviews</h2>
           <p className="text-yellow-500 mb-4">
-            ★ {averageRating.toFixed(1)} average based on{' '}
-            {plugin.reviews?.length || 0} reviews
+            ★ {averageRating.toFixed(1)} average based on {reviews.length}{' '}
+            reviews
           </p>
 
-          {plugin.reviews?.length > 0 ? (
-            plugin.reviews.map((review, index) => (
+          {reviews.length > 0 ? (
+            reviews.map((review, index) => (
               <div key={index} className="mb-4 border-b pb-2">
                 <p className="font-semibold">{review.user}</p>
                 <p className="text-yellow-500 mb-2">

@@ -15,10 +15,4 @@ const CartItem = sequelize.define(
   }
 );
 
-Cart.hasMany(CartItem, { foreignKey: 'cartId' });
-CartItem.belongsTo(Cart, { foreignKey: 'cartId' });
-
-Plugin.hasMany(CartItem, { foreignKey: 'pluginId' });
-CartItem.belongsTo(Plugin, { foreignKey: 'pluginId' });
-
 export default CartItem;

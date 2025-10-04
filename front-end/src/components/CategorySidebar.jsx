@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 function CategorySidebar({ isOpen, setIsOpen }) {
   const [categories, setCategories] = useState([]);
   useEffect(() => {
-    fetch('http://localhost:4000/api/categories/')
+    fetch('http://localhost:4000/api/categories/fetchAllCategories')
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error(err));

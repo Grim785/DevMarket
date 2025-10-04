@@ -12,10 +12,7 @@ const Order = sequelize.define(
     },
     paymentIntentId: { type: DataTypes.STRING },
   },
-  {
-    tableName: 'orders',
-    timestamps: true,
-  }
+  { tableName: 'orders', timestamps: true }
 );
 
 export default Order;

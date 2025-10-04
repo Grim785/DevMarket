@@ -19,7 +19,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
   });
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/categories', {
+    fetch('http://localhost:4000/api/categories/fetchAllCategories', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

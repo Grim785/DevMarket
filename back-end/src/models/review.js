@@ -30,11 +30,4 @@ const Review = sequelize.define(
   }
 );
 
-// Quan hệ
-User.hasMany(Review, { foreignKey: 'userId', as: 'reviews' });
-Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-
-Plugin.hasMany(Review, { foreignKey: 'pluginId', as: 'reviews' });
-Review.belongsTo(Plugin, { foreignKey: 'pluginId', as: 'plugin' });
-
 export default Review;

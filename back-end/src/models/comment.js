@@ -21,10 +21,5 @@ const Comment = sequelize.define(
     tableName: 'comments',
   }
 );
-User.hasMany(Comment, { foreignKey: 'userId', as: 'comments' });
-Comment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-
-Review.hasMany(Comment, { foreignKey: 'reviewId', as: 'comments' });
-Comment.belongsTo(Review, { foreignKey: 'reviewId', as: 'review' });
 
 export default Comment;

@@ -3,7 +3,7 @@ import { pickFields } from '../utils/pickFields.js';
 import fs from 'fs';
 import path from 'path';
 
-const { Plugin } = db;
+const { Plugin, OrderItem, Order } = db;
 
 const allowedFields = [
   'name',
@@ -98,9 +98,18 @@ const pluginController = {
   // Xóa plugin
   deletePlugin: async (req, res) => {
     try {
-      const plugin = await Plugin.findByPk(req.params.id);
+      const pluginId = req.params.id;
+      const plugin = await Plugin.findByPk(pluginId);
       if (!plugin) {
         return res.status(404).json({ message: 'Plugin not found' });
+      }
+
+      // Kiểm tra order history
+      const count = await OrderItem.count({ where: { pluginId } });
+      if (count > 0) {
+        return res.status(400).json({
+          message: 'Cannot delete plugin because it has order history',
+        });
       }
 
       // Xóa file nếu tồn tại
@@ -183,6 +192,31 @@ const pluginController = {
     } catch (error) {
       console.error('Error downloading file:', error);
       res.status(500).json({ message: 'Lỗi download file', error });
+    }
+  },
+
+  //check purchased
+  checkPurchased: async (req, res) => {
+    const userId = req.user.id;
+    const pluginId = req.params.id;
+    try {
+      const orders = await Order.findAll({
+        where: { userId, status: 'paid' },
+        include: [
+          {
+            model: Plugin,
+            as: 'plugins', // phải trùng alias
+            where: { id: pluginId },
+          },
+        ],
+      });
+
+      console.log(orders);
+
+      const purchased = orders.length > 0;
+      res.json({ purchased });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   },
 };
