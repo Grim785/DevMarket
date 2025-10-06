@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import AddOrEditPlugin from '../components/AddOrEditPlugin';
 import AddOrEditUser from '../components/AddOrEditUser';
 import AddOrEditCategory from '../components/AddOrEditCategory';
+import { AuthContext } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext'; // hook từ context Socket
 
 const TABS = ['plugins', 'users', 'orders', 'categories'];
 
 function AdminPage() {
+  const { token, user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('plugins');
   const [plugins, setPlugins] = useState([]);
   const [users, setUsers] = useState([]);
@@ -15,6 +18,7 @@ function AdminPage() {
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const socket = useSocket();
 
   const API_BASE = 'http://localhost:4000';
 
@@ -26,7 +30,7 @@ function AdminPage() {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (!res.ok) throw new Error('Failed to fetch');
@@ -48,6 +52,30 @@ function AdminPage() {
     fetchData('/api/categories/fetchAllCategories', setCategories); // lấy data.categories
   }, []);
 
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewUser = () => {
+      fetchData('/api/users/fetchAllusers', setUsers);
+    };
+
+    const handleNewOrder = () => {
+      fetchData('/api/orders/fetchAllOrders', setOrders, 'orders'); // lấy data.orders
+    };
+
+    const handleUpdateOrder = () => {
+      fetchData('/api/orders/fetchAllOrders', setOrders, 'orders'); // lấy data.orders
+    };
+
+    socket.on('newUser', handleNewUser);
+    socket.on('newOrder', handleNewOrder);
+    socket.on('updateOrder', handleUpdateOrder);
+    return () => {
+      socket.off('newUser', handleNewUser);
+      socket.off('newOrder', handleNewOrder);
+      socket.off('updateOrder', handleUpdateOrder);
+    };
+  }, [socket]);
+
   // Xử lý xóa item
   const handleDelete = async (type, id) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
@@ -57,15 +85,19 @@ function AdminPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      let data = {};
-      try {
-        data = await res.json(); // đọc body 1 lần
-      } catch (e) {
-        // nếu server trả 204 No Content hoặc body rỗng
+      // Kiểm tra nếu có body
+      let data = null;
+      const text = await res.text(); // đọc thô
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          console.warn('Response is not valid JSON:', text);
+        }
       }
 
       if (!res.ok) {
@@ -138,7 +170,7 @@ function AdminPage() {
     if (activeTab === 'plugins') return ['ID', 'Name', 'Price ($)', 'Actions'];
     if (activeTab === 'users') return ['ID', 'Username', 'Email', 'Actions'];
     if (activeTab === 'orders')
-      return ['ID', 'User', 'Status', 'Total(cent)', 'Actions'];
+      return ['ID', 'User', 'Status', 'Total', 'Actions'];
     if (activeTab === 'categories') return ['ID', 'Name', 'Actions'];
   };
 

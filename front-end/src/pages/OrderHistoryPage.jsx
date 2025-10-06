@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const OrderHistory = () => {
+  const { token, user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const token = localStorage.getItem('token'); // ✅ đồng nhất key
         const res = await fetch(
           'http://localhost:4000/api/orders/fetchUserOrders',
           {
@@ -25,7 +26,6 @@ const OrderHistory = () => {
         }
 
         const data = await res.json();
-        console.log('Orders data:', data);
         setOrders(Array.isArray(data) ? data : data.orders || []);
       } catch (error) {
         console.error('Error fetching orders:', error);

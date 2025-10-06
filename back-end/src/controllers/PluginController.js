@@ -2,8 +2,10 @@ import db from '../models/index.js';
 import { pickFields } from '../utils/pickFields.js';
 import fs from 'fs';
 import path from 'path';
+import { io } from '../index.js'; // import io để emit
+import slugify from 'slugify';
 
-const { Plugin, OrderItem, Order } = db;
+const { Plugin, OrderItem, Order, Category } = db;
 
 const allowedFields = [
   'name',
@@ -18,6 +20,7 @@ const allowedFields = [
   'status',
   'rating',
   'downloads',
+  'userId',
 ];
 
 const pluginController = {
@@ -61,7 +64,8 @@ const pluginController = {
   // Cập nhật plugin
   updatePlugin: async (req, res) => {
     try {
-      const plugin = await Plugin.findByPk(req.params.id);
+      const pluginId = req.params.id;
+      const plugin = await Plugin.findByPk(pluginId);
       if (!plugin) {
         return res.status(404).json({ message: 'Plugin not found' });
       }
@@ -96,7 +100,10 @@ const pluginController = {
 
       await plugin.update({ ...data });
 
-      res.json(plugin);
+      const updatedPlugin = await Plugin.findByPk(pluginId);
+
+      res.json(updatedPlugin);
+      io.emit('updatePlugin', updatedPlugin);
     } catch (error) {
       console.error('Error updating plugin:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -128,8 +135,17 @@ const pluginController = {
         }
       }
 
+      // Lưu slug hoặc id trước khi xóa
+      const deletedPluginData = {
+        id: plugin.id,
+        slug: plugin.slug,
+        categoryId: plugin.categoryId,
+      };
+
       // Xóa record trong DB
       await plugin.destroy();
+
+      io.emit('deletePlugin', deletedPluginData);
 
       res.json({ message: 'Plugin deleted successfully' });
     } catch (error) {
@@ -145,34 +161,59 @@ const pluginController = {
     try {
       const file = req.files['file']?.[0];
       const thumbnail = req.files['thumbnail']?.[0];
-
-      if (!file)
-        return res.status(400).json({ message: 'Plugin file is required' });
-      if (!thumbnail)
-        return res.status(400).json({ message: 'Thumbnail is required' });
+      if (!file || !thumbnail)
+        return res.status(400).json({ message: 'File và thumbnail bắt buộc' });
 
       const fileUrl = `/uploads/${file.filename}`;
       const thumbnailUrl = `/uploads/${thumbnail.filename}`;
+      const data = pickFields(req.body, [
+        'name',
+        'description',
+        'version',
+        'price',
+        'author',
+        'categoryId',
+        'userId',
+      ]);
 
-      const data = pickFields(req.body, allowedFields);
+      // ✅ Tạo slug gốc
+      let baseSlug = slugify(data.name, { lower: true, strict: true });
+      let slug = baseSlug;
+      let counter = 1;
 
-      // ép price >= 0
-      if (data.price && data.price < 0)
-        return res.status(400).json({ message: 'Price không được nhỏ hơn 0' });
+      // ✅ Kiểm tra trùng slug trong DB
+      while (await Plugin.findOne({ where: { slug } })) {
+        slug = `${baseSlug}-${counter++}`;
+      }
 
+      // ✅ Tạo plugin mới
       const plugin = await Plugin.create({
         ...data,
+        slug,
         fileUrl,
         thumbnail: thumbnailUrl,
       });
 
+      // 🔔 Emit real-time đến front-end
+      const category = await Category.findByPk(plugin.categoryId);
+      io.emit('newPlugin', {
+        id: plugin.id,
+        name: plugin.name,
+        description: plugin.description,
+        price: plugin.price,
+        category: category?.slug,
+        thumbnail: plugin.thumbnail,
+      });
+
       res.status(201).json({
-        message: 'Upload plugin + thumbnail thành công',
+        message: 'Upload plugin thành công',
         plugin,
       });
-    } catch (error) {
-      console.error('Error uploading plugin with thumbnail:', error);
-      res.status(500).json({ message: 'Lỗi upload plugin', error });
+    } catch (err) {
+      console.error('Error uploading plugin:', err);
+      res
+        .status(500)
+        .json({ message: 'Lỗi upload plugin', error: err.message });
     }
   },
 

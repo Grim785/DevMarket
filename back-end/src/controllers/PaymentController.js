@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import db from '../models/index.js';
 import dotenv from 'dotenv';
+import { io } from '../index.js';
 
 dotenv.config();
 
@@ -21,6 +22,8 @@ const PaymentController = {
         products.reduce((sum, item) => sum + item.price, 0) * 100
       );
 
+      const totalUSD = products.reduce((sum, item) => sum + item.price, 0);
+
       // Tạo PaymentIntent trên Stripe
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount,
@@ -31,7 +34,7 @@ const PaymentController = {
       // Tạo Order pending
       const order = await db.Order.create({
         userId,
-        totalAmount,
+        totalAmount: totalUSD, // lưu USD
         status: 'pending',
         paymentIntentId: paymentIntent.id,
       });
@@ -50,6 +53,8 @@ const PaymentController = {
         clientSecret: paymentIntent.client_secret,
         orderId: order.id,
       });
+
+      io.emit('newOrder', order);
     } catch (err) {
       console.error('Stripe error:', err);
       res.status(500).json({ error: err.message });
@@ -93,6 +98,7 @@ const PaymentController = {
         console.log(
           `Order ${order.id} paid. Cart cleared for user ${order.userId}.`
         );
+        io.emit('updateOrder', order);
       }
     }
 

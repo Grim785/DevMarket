@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import db from '../models/index.js';
 import { generateToken } from '../utils/jwt.js';
 const { User } = db;
+import { io } from '../index.js';
 
 const authController = {
   // Login
@@ -67,6 +68,8 @@ const authController = {
           username: newUser.username,
         },
       });
+
+      io.emit('newUser', newUser);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error: error.message });
     }

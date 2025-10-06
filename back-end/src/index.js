@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import router from './routes/index.js';
 import db from './models/index.js';
+import http from 'http';
+import { Server } from 'socket.io';
 
 dotenv.config();
 
@@ -32,6 +34,26 @@ app.use('/api', router);
 
 app.use('/uploads', express.static('uploads'));
 
+// Tạo HTTP server từ Express app
+const server = http.createServer(app);
+
+// Tạo Socket.IO server
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    credentials: true,
+  },
+});
+
+// Khi có client kết nối Socket.IO
+io.on('connection', (socket) => {
+  console.log('✅ Client connected via Socket.IO:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('❌ Client disconnected:', socket.id);
+  });
+});
+
 // Start server only if DB is connected
 const startServer = async () => {
   try {
@@ -41,7 +63,7 @@ const startServer = async () => {
     await db.sequelize.sync(); // sync models
     console.log('✅ All models synchronized successfully.');
 
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`🚀 Server is running at http://localhost:${port}`);
     });
   } catch (error) {
@@ -51,3 +73,6 @@ const startServer = async () => {
 };
 
 startServer();
+
+// Export io nếu cần dùng ở các route khác
+export { io };

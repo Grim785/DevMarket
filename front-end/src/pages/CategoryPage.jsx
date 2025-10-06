@@ -1,29 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useSocket } from '../contexts/SocketContext'; // hook từ context Socket
 
 const CategoryPage = () => {
   const { slug } = useParams();
+  const socket = useSocket(); // Lấy socket từ context
   const [categoryName, setCategoryName] = useState('');
   const [plugins, setPlugins] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlugins = async () => {
-      try {
-        const res = await fetch(`http://localhost:4000/api/categories/${slug}`);
-        if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
-        const data = await res.json();
-        setCategoryName(data.category);
-        setPlugins(data.plugins || []);
-      } catch (error) {
-        console.error('Error fetching category plugins:', error);
-      } finally {
-        setLoading(false);
+    fetchPlugins();
+  }, [slug]);
+
+  const fetchPlugins = async () => {
+    try {
+      const res = await fetch(`http://localhost:4000/api/categories/${slug}`);
+      if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
+      const data = await res.json();
+      setCategoryName(data.category);
+      setPlugins(data.plugins || []);
+    } catch (error) {
+      console.error('Error fetching category plugins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- real-time với socket ---
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewPlugin = (plugin) => {
+      // Chỉ thêm plugin nếu cùng category
+      if (plugin.category === slug) {
+        setPlugins((prev) => [...prev, plugin]);
       }
     };
 
-    fetchPlugins();
-  }, [slug]);
+    const handleDeletePlugin = (deletedPluginData) => {
+      setPlugins((prev) => prev.filter((p) => p.id !== deletedPluginData.id));
+    };
+
+    const handleUpdatePlugin = (plugin) => {
+      setPlugins((prev) => prev.map((p) => (p.id === plugin.id ? plugin : p)));
+    };
+    socket.on('newPlugin', handleNewPlugin);
+    socket.on('deletePlugin', handleDeletePlugin);
+    socket.on('updatePlugin', handleUpdatePlugin);
+
+    return () => {
+      socket.off('newPlugin', handleNewPlugin);
+      socket.off('deletePlugin', handleDeletePlugin);
+      socket.off('updatePlugin', handleUpdatePlugin);
+    };
+  }, [socket, slug]);
 
   if (loading)
     return (
@@ -77,7 +107,7 @@ const CategoryPage = () => {
                 {Number(plugin.price)?.toFixed(2)}
               </p>
               <Link
-                to={`/plugin/${plugin.id}`}
+                to={`/plugin/${plugin.id}/${plugin.slug}`}
                 className="inline-block w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
               >
                 Details

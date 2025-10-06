@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import slugify from 'slugify';
 
 const Plugin = sequelize.define(
   'Plugin',
@@ -23,13 +22,5 @@ const Plugin = sequelize.define(
   },
   { tableName: 'plugins', timestamps: true }
 );
-
-Plugin.beforeCreate((plugin) => {
-  plugin.slug = slugify(plugin.name, { lower: true, strict: true });
-});
-
-Plugin.beforeUpdate((plugin) => {
-  plugin.slug = slugify(plugin.name, { lower: true, strict: true });
-});
 
 export default Plugin;

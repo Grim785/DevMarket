@@ -4,7 +4,6 @@ const { Order, Plugin, OrderItem } = db;
 const orderController = {
   //lấy danh order của tất cả
   getAllOrders: async (req, res) => {
-    console.log(req.user.role);
     try {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });

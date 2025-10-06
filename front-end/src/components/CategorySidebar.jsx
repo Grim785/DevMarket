@@ -1,14 +1,45 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useSocket } from '../contexts/SocketContext';
 
 function CategorySidebar({ isOpen, setIsOpen }) {
+  const socket = useSocket();
   const [categories, setCategories] = useState([]);
   useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = () => {
     fetch('http://localhost:4000/api/categories/fetchAllCategories')
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error(err));
-  }, []);
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewCate = () => {
+      fetchData();
+    };
+
+    const handleUpdateCate = () => {
+      fetchData();
+    };
+    const handleDeleteCate = () => {
+      fetchData();
+    };
+
+    socket.on('newCategory', handleNewCate);
+    socket.on('updateCategory', handleUpdateCate);
+    socket.on('deleteCategory', handleDeleteCate);
+
+    return () => {
+      socket.off('newCategory', handleNewCate);
+      socket.off('updateCategory', handleUpdateCate);
+      socket.off('deleteCategory', handleDeleteCate);
+    };
+  });
 
   return (
     <>

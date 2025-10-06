@@ -65,7 +65,6 @@ const userController = {
   // Xóa user
   deleteUser: async (req, res) => {
     try {
-      console.log(req.params.id);
       const deleted = await User.destroy({
         where: { id: req.params.id },
       });

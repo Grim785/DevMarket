@@ -4,7 +4,7 @@ import { BiCartDownload } from 'react-icons/bi';
 const PluginModal = ({ plugin }) => {
   return (
     <Link
-      to={`/plugin/${plugin.id}`}
+      to={`/plugin/${plugin.id}/${plugin.slug}`}
       className="group relative border rounded-lg p-4 hover:shadow-lg transition duration-300"
     >
       <img

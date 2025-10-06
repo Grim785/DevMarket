@@ -1,4 +1,6 @@
 import db from '../models/index.js';
+import { io } from '../index.js';
+import { Socket } from 'socket.io';
 const CategoryController = {
   getAllCategories: async (req, res) => {
     try {
@@ -13,7 +15,6 @@ const CategoryController = {
   getPluginsByCategory: async (req, res) => {
     try {
       const { slug } = req.params;
-      console.log();
 
       // 🔍 Tìm category theo slug
       const category = await db.Category.findOne({ where: { slug } });
@@ -49,12 +50,15 @@ const CategoryController = {
     const { name, description } = req.body;
     try {
       const newCategory = await db.Category.create({ name, description });
+
+      io.emit('newCategory', newCategory);
       res.status(201).json(newCategory);
     } catch (error) {
       console.error('Error creating category:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
+
   updateCategory: async (req, res) => {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -67,11 +71,13 @@ const CategoryController = {
       category.description = description || category.description;
       await category.save();
       res.json(category);
+      io.emit('updateCategory', category);
     } catch (error) {
       console.error('Error updating category:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
+
   deleteCategory: async (req, res) => {
     const { id } = req.params;
     try {
@@ -79,8 +85,13 @@ const CategoryController = {
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
+      const categorydelete = {
+        id: category.id,
+        name: category.name,
+      };
       await category.destroy();
       res.json({ message: 'Category deleted successfully' });
+      io.emit('deleteCategory', categorydelete);
     } catch (error) {
       console.error('Error deleting category:', error);
       res.status(500).json({ error: 'Internal server error' });

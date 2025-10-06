@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
+  const { token, user } = useContext(AuthContext);
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
@@ -15,6 +17,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
     fileUrl: '',
     thumbnail: '',
     categoryId: '',
+    userId: user.id,
   });
 
   useEffect(() => {
@@ -22,7 +25,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${token}`,
       },
     })
       .then((res) => res.json())
@@ -33,7 +36,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${token}`,
       },
     })
       .then((res) => res.json())
@@ -55,6 +58,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
         file: plugin.fileUrl || '',
         thumbnail: plugin.thumbnail || '',
         categoryId: plugin.categoryId || '',
+        userId: user.id,
       });
     }
   }, [plugin]);
@@ -92,7 +96,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
         {
           method: plugin ? 'PUT' : 'POST',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
             // ❌ KHÔNG set Content-Type, để browser tự set
           },
           body: data,
