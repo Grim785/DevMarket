@@ -10,17 +10,38 @@ const CategoryController = {
     }
   },
 
-  getCategoryById: async (req, res) => {
-    const { id } = req.params;
+  getPluginsByCategory: async (req, res) => {
     try {
-      const category = await db.Category.findByPk(id);
+      const { slug } = req.params;
+      console.log();
+
+      // 🔍 Tìm category theo slug
+      const category = await db.Category.findOne({ where: { slug } });
       if (!category) {
-        return res.status(404).json({ error: 'Category not found' });
+        return res.status(404).json({ message: 'Category not found' });
       }
-      res.json(category);
+
+      // 🔌 Lấy plugin theo categoryId
+      const plugins = await db.Plugin.findAll({
+        where: { categoryId: category.id },
+        include: [
+          {
+            model: db.User,
+            as: 'authorUser',
+            attributes: ['id', 'username', 'email'],
+          },
+          {
+            model: db.Category,
+            as: 'category',
+            attributes: ['id', 'name', 'slug'],
+          },
+        ],
+      });
+
+      res.json({ category: category.name, plugins });
     } catch (error) {
-      console.error('Error fetching category:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error fetching plugins by category:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   },
 

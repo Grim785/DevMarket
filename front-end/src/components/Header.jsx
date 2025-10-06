@@ -52,7 +52,7 @@ function Header({ setIsOpen, headerRef }) {
       >
         <div className="container mx-auto px-4 py-4 flex justify-between items-center flex-wrap">
           <div className="flex items-center space-x-4">
-            {user.username === 'admin' ? null : (
+            {user.role === 'admin' ? null : (
               <div
                 className="header-hover-effect rounded-md p-2 order-first m-0"
                 onClick={() => setIsOpen((prev) => !prev)}
@@ -61,9 +61,7 @@ function Header({ setIsOpen, headerRef }) {
               </div>
             )}
             <h1 className="md:text-2xl text-xl font-bold text-blue-600 header-hover-effect p-2 rounded-md">
-              <Link to={user.username === 'admin' ? '/admin' : '/'}>
-                DevMarket
-              </Link>
+              <Link to={user.role === 'admin' ? '/admin' : '/'}>DevMarket</Link>
             </h1>
           </div>
 
@@ -102,22 +100,16 @@ function Header({ setIsOpen, headerRef }) {
                           Account settings
                         </a>
                       </MenuItem>
-                      <MenuItem>
-                        <a
-                          href="#"
-                          className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
-                        >
-                          Support
-                        </a>
-                      </MenuItem>
-                      <MenuItem>
-                        <a
-                          href="#"
-                          className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
-                        >
-                          License
-                        </a>
-                      </MenuItem>
+                      {user.role === 'admin' ? null : (
+                        <MenuItem>
+                          <Link
+                            to="/orders"
+                            className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:text-gray-900 data-focus:outline-hidden"
+                          >
+                            Order History
+                          </Link>
+                        </MenuItem>
+                      )}
                       <MenuItem>
                         <button
                           onClick={handleLogout}
@@ -139,7 +131,7 @@ function Header({ setIsOpen, headerRef }) {
               </div>
             )}
             <div>EN</div>
-            {user.username === 'admin' ? null : (
+            {user.role === 'admin' ? null : (
               <Link to="/cart" className="text-blue-600 hover:underline">
                 <BiCartDownload className="md:text-2xl text-xl" />
               </Link>

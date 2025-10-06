@@ -10,6 +10,8 @@ import SignupPage from './pages/SignupPage';
 import CartPage from './pages/CartPage';
 import PaymentPage from './pages/PaymentPage';
 import AdminPage from './pages/AdminPage';
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import CategoryPage from './pages/CategoryPage';
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
             <Route path="cart" element={<CartPage />} />
             <Route path="payment" element={<PaymentPage />} />
             <Route path="admin" element={<AdminPage />} />
+            <Route path="orders" element={<OrderHistoryPage />} />
+            <Route path="categories/:slug" element={<CategoryPage />} />
           </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="signup" element={<SignupPage />} />

@@ -30,6 +30,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', router);
 
+app.use('/uploads', express.static('uploads'));
+
 // Start server only if DB is connected
 const startServer = async () => {
   try {

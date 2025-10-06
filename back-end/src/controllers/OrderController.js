@@ -1,5 +1,5 @@
 import db from '../models/index.js';
-const { Order, Plugin } = db;
+const { Order, Plugin, OrderItem } = db;
 
 const orderController = {
   //lấy danh order của tất cả
@@ -24,10 +24,21 @@ const orderController = {
   getOrders: async (req, res) => {
     try {
       const orders = await req.user.getOrders({
-        include: ['plugins'],
+        include: [
+          {
+            model: Plugin,
+            as: 'plugins',
+            through: {
+              model: OrderItem,
+              attributes: ['price'], // các cột trong OrderItem
+            },
+          },
+        ],
+        order: [['createdAt', 'DESC']],
       });
-      return res.json({ orders });
+      return res.json(orders);
     } catch (error) {
+      console.error('Error fetching orders:', error);
       res.status(500).json({ message: 'Server error', error: error.message });
     }
   },

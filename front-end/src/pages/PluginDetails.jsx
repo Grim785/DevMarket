@@ -167,7 +167,13 @@ function PluginDetails() {
         {/* Preview */}
         <div className="bg-white p-6">
           <img
-            src="https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png"
+            src={
+              plugin.thumbnail
+                ? plugin.thumbnail.startsWith('http')
+                  ? plugin.thumbnail // đã là URL đầy đủ
+                  : `http://localhost:4000${plugin.thumbnail}` // prepend domain
+                : 'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
+            }
             className="w-full h-64 sm:object-cover object-contain mb-4 rounded-lg"
           />
         </div>

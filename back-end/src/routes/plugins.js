@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import pluginController from '../controllers/pluginController.js';
+import pluginController from '../controllers/PluginController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
@@ -7,13 +7,10 @@ import path from 'path';
 const router = Router();
 
 // Cấu hình lưu file với multer
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // thư mục lưu file
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // đặt tên duy nhất
-  },
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
 });
 
 const upload = multer({ storage });
@@ -27,7 +24,10 @@ router.post('/addplugin', authMiddleware(), pluginController.addPlugin);
 router.put(
   '/updateplugin/:id',
   authMiddleware(),
-  upload.single('file'), // nhận file từ input name="file"
+  upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+  ]), // nhận file từ input name="file"
   pluginController.updatePlugin
 );
 
@@ -37,13 +37,13 @@ router.delete(
   pluginController.deletePlugin
 );
 
-router.get('/category/:id', pluginController.getPluginsByCategory);
-
-// Upload file (plugin zip, hình ảnh…)
 router.post(
   '/upload',
   authMiddleware(),
-  upload.single('file'), // nhận file từ input name="file"
+  upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+  ]),
   pluginController.uploadFile
 );
 

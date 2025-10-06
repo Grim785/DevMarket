@@ -74,16 +74,24 @@ const pluginController = {
       }
 
       // Nếu có upload file mới
-      if (req.file) {
-        // Xóa file cũ nếu có
-        if (plugin.fileUrl) {
-          const oldPath = path.resolve(`.${plugin.fileUrl}`);
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
+      if (req.files) {
+        // Xử lý file chính
+        if (req.files.file && req.files.file[0]) {
+          if (plugin.fileUrl) {
+            const oldFile = path.resolve(`.${plugin.fileUrl}`);
+            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
           }
+          data.fileUrl = `/uploads/${req.files.file[0].filename}`;
         }
-        // Gán file mới
-        data.fileUrl = `/uploads/${req.file.filename}`;
+
+        // Xử lý thumbnail
+        if (req.files.thumbnail && req.files.thumbnail[0]) {
+          if (plugin.thumbnail) {
+            const oldThumb = path.resolve(`.${plugin.thumbnail}`);
+            if (fs.existsSync(oldThumb)) fs.unlinkSync(oldThumb);
+          }
+          data.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
+        }
       }
 
       await plugin.update({ ...data });
@@ -131,48 +139,40 @@ const pluginController = {
   },
 
   // Lấy plugin theo category
-  getPluginsByCategory: async (req, res) => {
-    try {
-      const categoryId = req.params.id;
-      const plugins = await Plugin.findAll({ where: { categoryId } });
-      res.json(plugins);
-    } catch (error) {
-      console.error('Error fetching plugins by category:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
 
   // Upload file
   uploadFile: async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-      }
+      const file = req.files['file']?.[0];
+      const thumbnail = req.files['thumbnail']?.[0];
 
-      // Tạo URL truy cập file
-      const fileUrl = `/uploads/${req.file.filename}`;
+      if (!file)
+        return res.status(400).json({ message: 'Plugin file is required' });
+      if (!thumbnail)
+        return res.status(400).json({ message: 'Thumbnail is required' });
 
-      // Lấy các field hợp lệ từ body
+      const fileUrl = `/uploads/${file.filename}`;
+      const thumbnailUrl = `/uploads/${thumbnail.filename}`;
+
       const data = pickFields(req.body, allowedFields);
 
       // ép price >= 0
-      if (data.price && data.price < 0) {
+      if (data.price && data.price < 0)
         return res.status(400).json({ message: 'Price không được nhỏ hơn 0' });
-      }
 
-      // Tạo plugin mới kèm fileUrl
       const plugin = await Plugin.create({
         ...data,
         fileUrl,
+        thumbnail: thumbnailUrl,
       });
 
-      res.json({
-        message: 'Upload & tạo plugin thành công',
+      res.status(201).json({
+        message: 'Upload plugin + thumbnail thành công',
         plugin,
       });
     } catch (error) {
-      console.error('Error uploading file:', error);
-      res.status(500).json({ message: 'Lỗi upload file', error });
+      console.error('Error uploading plugin with thumbnail:', error);
+      res.status(500).json({ message: 'Lỗi upload plugin', error });
     }
   },
 
@@ -210,8 +210,6 @@ const pluginController = {
           },
         ],
       });
-
-      console.log(orders);
 
       const purchased = orders.length > 0;
       res.json({ purchased });

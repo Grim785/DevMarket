@@ -19,6 +19,6 @@ router.put(
   authMiddleware(),
   categoryController.updateCategory
 );
-router.get('/:id', authMiddleware(), categoryController.getCategoryById);
+router.get('/:slug', categoryController.getPluginsByCategory);
 
 export default router;

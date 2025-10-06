@@ -23,9 +23,8 @@ export default function CheckoutForm({ clientSecret, orderId }) {
       const { paymentIntent, error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: undefined, // không redirect
+          return_url: `${window.location.origin}/orders`, // không redirect
         },
-        redirect: 'if_required', // Stripe chỉ redirect nếu cần
       });
 
       if (error) {

@@ -5,7 +5,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
     description: '',
     version: '',
     price: '',
@@ -46,7 +45,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
     if (plugin) {
       setFormData({
         name: plugin.name || '',
-        slug: plugin.slug || '',
         description: plugin.description || '',
         version: plugin.version || '',
         price: plugin.price || '',
@@ -64,7 +62,10 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
   const handleChange = (e) => {
     const { name, value, files, type } = e.target;
     if (type === 'file') {
-      setFormData((prev) => ({ ...prev, file: files[0] })); // 👈 lưu vào "file"
+      setFormData((prev) => ({
+        ...prev,
+        [name]: files[0], // ❌ sử dụng name để lưu đúng vào file hoặc thumbnail
+      }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -81,6 +82,8 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
           data.append(key, formData[key]);
         }
       });
+
+      console.log(formData);
 
       const res = await fetch(
         plugin
@@ -130,15 +133,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             onChange={handleChange}
             placeholder="Name"
             required
-            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
-          <input
-            type="text"
-            name="slug"
-            value={formData.slug}
-            onChange={handleChange}
-            placeholder="Slug"
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
 
@@ -230,11 +224,9 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
           />
 
           <input
-            type="text"
+            type="file"
             name="thumbnail"
-            value={formData.thumbnail}
             onChange={handleChange}
-            placeholder="Thumbnail URL"
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
 

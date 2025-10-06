@@ -1,92 +1,120 @@
 import db from '../models/index.js';
+import slugify from 'slugify';
 
 async function seed() {
   try {
     console.log('⚡ Syncing database (force: true)...');
-    await db.sequelize.sync({ force: true }); // xóa sạch bảng
+    await db.sequelize.sync({ force: true });
     console.log('✅ Database synced!');
 
     /* --------------------------
-       1. Tạo Users
+       1. Users
     --------------------------- */
-    const admin = await db.User.create({
-      username: 'admin',
-      email: 'admin@example.com',
-      password: '123456',
-      role: 'admin',
-    });
+    const [admin, seller, buyer] = await Promise.all([
+      db.User.create({
+        username: 'admin',
+        email: 'admin@example.com',
+        password: '123456',
+        role: 'admin',
+      }),
+      db.User.create({
+        username: 'seller01',
+        email: 'seller01@example.com',
+        password: '123456',
+        role: 'seller',
+      }),
+      db.User.create({
+        username: 'buyer01',
+        email: 'buyer01@example.com',
+        password: '123456',
+        role: 'buyer',
+      }),
+    ]);
 
-    const seller = await db.User.create({
-      username: 'seller01',
-      email: 'seller01@example.com',
-      password: '123456',
-      role: 'seller',
-    });
-
-    const buyer = await db.User.create({
-      username: 'buyer01',
-      email: 'buyer01@example.com',
-      password: '123456',
-      role: 'buyer',
-    });
+    console.log('👥 Users created');
 
     /* --------------------------
-       2. Tạo Categories
+       2. Categories
     --------------------------- */
-    const webCategory = await db.Category.create({ name: 'Web Development' });
-    const gameCategory = await db.Category.create({ name: 'Game Plugins' });
+    const categories = [
+      { name: 'Web Development' },
+      { name: 'Game Plugins' },
+      { name: 'Mobile App' },
+      { name: 'AI Tools' },
+    ];
+
+    const categoryRecords = await Promise.all(
+      categories.map((cat) =>
+        db.Category.create({
+          name: cat.name,
+          slug: slugify(cat.name, { lower: true, strict: true }),
+        })
+      )
+    );
+
+    const [webCategory, gameCategory] = categoryRecords;
+    console.log('📁 Categories created');
 
     /* --------------------------
-       3. Tạo Plugins
+       3. Plugins
     --------------------------- */
-    const plugin1 = await db.Plugin.create({
-      name: 'React UI Kit',
-      slug: 'react-ui-kit',
-      description: 'A modern UI kit for React projects.',
-      version: '1.0.0',
-      price: 19.99,
-      author: seller.username,
-      fileUrl: '/uploads/react-ui-kit.zip',
-      thumbnail: '/uploads/react-ui-kit.png',
-      userId: seller.id,
-      categoryId: webCategory.id,
-      status: 'approved',
-    });
+    const plugins = [
+      {
+        name: 'React UI Kit',
+        description: 'A modern UI kit for React projects.',
+        version: '1.0.0',
+        price: 19.99,
+        categoryId: webCategory.id,
+        thumbnail: '/uploads/react-ui-kit.png',
+        fileUrl: '/uploads/react-ui-kit.zip',
+      },
+      {
+        name: 'Unity Shader Pack',
+        description: 'Collection of shaders for Unity.',
+        version: '2.1.0',
+        price: 29.99,
+        categoryId: gameCategory.id,
+        thumbnail: '/uploads/unity-shader-pack.png',
+        fileUrl: '/uploads/unity-shader-pack.zip',
+      },
+    ];
 
-    const plugin2 = await db.Plugin.create({
-      name: 'Unity Shader Pack',
-      slug: 'unity-shader-pack',
-      description: 'Collection of shaders for Unity.',
-      version: '2.1.0',
-      price: 29.99,
-      author: seller.username,
-      fileUrl: '/uploads/unity-shader-pack.zip',
-      thumbnail: '/uploads/unity-shader-pack.png',
-      userId: seller.id,
-      categoryId: gameCategory.id,
-      status: 'approved',
-    });
+    const pluginRecords = await Promise.all(
+      plugins.map((p) =>
+        db.Plugin.create({
+          ...p,
+          slug: slugify(p.name, { lower: true, strict: true }),
+          author: seller.username,
+          userId: seller.id,
+          status: 'approved',
+        })
+      )
+    );
+
+    const [plugin1, plugin2] = pluginRecords;
+    console.log('🔌 Plugins created');
 
     /* --------------------------
-       4. Tạo Cart & CartItems cho buyer
+       4. Cart & CartItems
     --------------------------- */
     const cart = await db.Cart.create({ userId: buyer.id });
+
     await db.CartItem.create({
       cartId: cart.id,
       pluginId: plugin1.id,
       quantity: 1,
     });
 
+    console.log('🛒 Cart created');
+
     /* --------------------------
-       5. Tạo Order & OrderItems
+       5. Orders & OrderItems
     --------------------------- */
-    // Order cho plugin2
     const order = await db.Order.create({
       userId: buyer.id,
-      pluginId: plugin2.id, // phải có pluginId
       totalAmount: plugin2.price,
       status: 'paid',
-      paymentIntentId: null, // chưa thanh toán Stripe test
+      paymentIntentId: 'pi_test_12345',
     });
 
     await db.OrderItem.create({
@@ -96,10 +124,12 @@ async function seed() {
       price: plugin2.price,
     });
 
+    console.log('📦 Orders created');
+
     /* --------------------------
-       6. Tạo Reviews & Comments
+       6. Reviews & Comments
     --------------------------- */
-    const review1 = await db.Review.create({
+    const review = await db.Review.create({
       userId: buyer.id,
       pluginId: plugin1.id,
       rating: 5,
@@ -108,10 +138,11 @@ async function seed() {
 
     await db.Comment.create({
       userId: buyer.id,
-      reviewId: review1.id,
+      reviewId: review.id,
       content: 'Totally agree!',
     });
 
+    console.log('⭐ Reviews and comments created');
     console.log('✅ Full seed data created successfully!');
     process.exit(0);
   } catch (error) {

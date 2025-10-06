@@ -9,8 +9,11 @@ const PluginModal = ({ plugin }) => {
     >
       <img
         src={
-          plugin.previewImage ??
-          'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
+          plugin.thumbnail
+            ? plugin.thumbnail.startsWith('http')
+              ? plugin.thumbnail // đã là URL đầy đủ
+              : `http://localhost:4000${plugin.thumbnail}` // prepend domain
+            : 'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
         }
         alt={plugin.name}
         className="w-full h-32 object-cover mb-4 rounded"

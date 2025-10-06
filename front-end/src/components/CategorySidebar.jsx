@@ -26,12 +26,12 @@ function CategorySidebar({ isOpen, setIsOpen }) {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-4 border-b font-bold text-lg">Danh mục Plugin</div>
+        <div className="p-4 border-b font-bold text-lg">Categories</div>
         <ul className="p-4 space-y-2">
           {categories.map((cat) => (
             <li key={cat.id}>
               <Link
-                to={`/category/${cat.name.toLowerCase().replace(/ /g, '-')}`}
+                to={`/categories/${cat.name.toLowerCase().replace(/ /g, '-')}`}
                 className="block text-gray-700 hover:text-blue-600 transition"
                 onClick={() => setIsOpen(false)}
               >
