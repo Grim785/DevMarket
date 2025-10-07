@@ -1,37 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../contexts/AuthContext';
+
+const API_BASE = import.meta.env.VITE_API_URL; // sử dụng env
 
 const SignupPage = () => {
   const navigator = useNavigate();
+  const { login } = useContext(AuthContext); // Dùng login từ context
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
   });
 
-  const handleSignup = (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    document.title = 'Signup';
+  }, []);
 
-    fetch('http://localhost:4000/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          navigator('/'); // Redirect to home page after successful signup
-        } else {
-          alert(data.message || 'Signup failed');
-        }
-      })
-      .catch((error) => {
-        console.error('Error during signup:', error);
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
+
+      const data = await res.json();
+
+      if (data.token) {
+        login(data.user, data.token); // cập nhật context + localStorage
+        navigator('/'); // redirect về home
+      } else {
+        alert(data.message || 'Signup failed');
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      alert('Signup failed. Please try again.');
+    }
   };
 
   return (
@@ -42,13 +49,12 @@ const SignupPage = () => {
         </h2>
         <form onSubmit={handleSignup}>
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="username">
+            <label htmlFor="username" className="block text-gray-700 mb-2">
               Username
             </label>
             <input
               type="text"
               id="username"
-              name="username"
               value={formData.username}
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
@@ -58,14 +64,14 @@ const SignupPage = () => {
               required
             />
           </div>
+
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="email">
+            <label htmlFor="email" className="block text-gray-700 mb-2">
               Email
             </label>
             <input
               type="email"
               id="email"
-              name="email"
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
@@ -75,8 +81,9 @@ const SignupPage = () => {
               required
             />
           </div>
+
           <div className="mb-6">
-            <label className="block text-gray-700 mb-2" htmlFor="password">
+            <label htmlFor="password" className="block text-gray-700 mb-2">
               Password
             </label>
             <input
@@ -86,19 +93,23 @@ const SignupPage = () => {
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
-              name="password"
               className="w-full px-3 py-2 border rounded"
               placeholder="Choose a password"
               required
             />
           </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-300"
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-300 mb-3"
           >
             Sign Up
           </button>
-          <Link to="/login" className="text-blue-600 hover:underline">
+
+          <Link
+            to="/login"
+            className="text-blue-600 hover:underline block text-center"
+          >
             Already have an account? Log in
           </Link>
         </form>

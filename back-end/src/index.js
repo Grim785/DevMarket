@@ -29,10 +29,9 @@ app.use((req, res, next) => {
   }
 });
 
+app.use('/api/uploads', express.static('uploads'));
 // Routes
 app.use('/api', router);
-
-app.use('/uploads', express.static('uploads'));
 
 // Tạo HTTP server từ Express app
 const server = http.createServer(app);
@@ -47,10 +46,13 @@ const io = new Server(server, {
 
 // Khi có client kết nối Socket.IO
 io.on('connection', (socket) => {
-  console.log('✅ Client connected via Socket.IO:', socket.id);
-
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Connected to Socket.IO server');
+  }
   socket.on('disconnect', () => {
-    console.log('❌ Client disconnected:', socket.id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('❌ Client disconnected:', socket.id);
+    }
   });
 });
 

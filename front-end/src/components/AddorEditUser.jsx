@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const AddOrEditUser = ({ user, onSave, onCancel }) => {
+  const { token } = useContext(AuthContext);
+  const API_BASE = import.meta.env.VITE_API_URL;
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     role: 'user',
     password: '',
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -14,7 +19,7 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
         username: user.username || '',
         email: user.email || '',
         role: user.role || 'user',
-        password: '', // password không show
+        password: '', // password không show khi edit
       });
     }
   }, [user]);
@@ -26,26 +31,41 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+
     try {
-      const res = await fetch(
-        user
-          ? `http://localhost:4000/api/users/updateuser/${user.id}`
-          : 'http://localhost:4000/api/users/adduser',
-        {
-          method: user ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(formData),
+      const url = user
+        ? `${API_BASE}/users/updateuser/${user.id}`
+        : `${API_BASE}/users/adduser`;
+
+      const res = await fetch(url, {
+        method: user ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      // parse response an toàn
+      let result = null;
+      const text = await res.text();
+      if (text) {
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { message: text };
         }
-      );
-      const result = await res.json();
+      }
+
       if (!res.ok) throw new Error(result.message || 'Failed to save user');
+
       onSave(result);
     } catch (err) {
-      console.error(err);
+      console.error('Error saving user:', err);
       alert('❌ ' + (err.message || 'Failed to save user'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,9 +130,12 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
+              disabled={loading}
+              className={`px-4 py-2 rounded text-white ${
+                loading ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
             >
-              Save
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>

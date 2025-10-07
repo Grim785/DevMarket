@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 const AddOrEditCategory = ({ category, onSave, onCancel }) => {
   const [name, setName] = useState('');
+  const { token } = useContext(AuthContext); // lấy token từ context
+  const API_BASE = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (category) setName(category.name || '');
@@ -10,21 +13,32 @@ const AddOrEditCategory = ({ category, onSave, onCancel }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(
-        category
-          ? `http://localhost:4000/api/categories/updatecategory/${category.id}`
-          : 'http://localhost:4000/api/categories/addcategory',
-        {
-          method: category ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({ name }),
+      const url = category
+        ? `${API_BASE}/categories/updatecategory/${category.id}`
+        : `${API_BASE}/categories/addcategory`;
+
+      const res = await fetch(url, {
+        method: category ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      // Parse response an toàn
+      let result = null;
+      const text = await res.text();
+      if (text) {
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { message: text };
         }
-      );
-      const result = await res.json();
+      }
+
       if (!res.ok) throw new Error(result.message || 'Failed to save category');
+
       onSave(result);
     } catch (err) {
       console.error(err);

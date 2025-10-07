@@ -8,10 +8,6 @@ import categoryRoutes from './category.js';
 import paymentRoutes from './payment.js';
 const router = Router();
 
-router.get('/', (req, res) => {
-  res.json({ message: 'Welcome to DevMarket API' });
-});
-
 router.use('/auth', authRoutes);
 router.use('/plugins', pluginRoutes);
 router.use('/users', userRoutes);

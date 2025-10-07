@@ -41,22 +41,30 @@ const pluginController = {
   // Lấy tất cả plugin
   fetchAllPlugin: async (req, res) => {
     try {
-      const plugins = await Plugin.findAll();
-      res.json(plugins);
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit) || 6;
+      const offset = (page - 1) * limit;
+
+      if (page) {
+        // Trả theo phân trang
+        const offset = (page - 1) * limit;
+        const { count, rows } = await Plugin.findAndCountAll({
+          limit,
+          offset,
+        });
+        res.json({
+          data: rows,
+          currentPage: page,
+          totalPages: Math.ceil(count / limit),
+          totalItems: count,
+        });
+      } else {
+        // Trả tất cả
+        const plugins = await Plugin.findAll();
+        res.json(plugins);
+      }
     } catch (error) {
       console.error('Error fetching plugins:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
-
-  // Thêm plugin mới
-  addPlugin: async (req, res) => {
-    try {
-      const data = pickFields(req.body, allowedFields);
-      const newPlugin = await Plugin.create({ ...data });
-      res.status(201).json(newPlugin);
-    } catch (error) {
-      console.error('Error adding plugin:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
@@ -66,6 +74,7 @@ const pluginController = {
     try {
       const pluginId = req.params.id;
       const plugin = await Plugin.findByPk(pluginId);
+
       if (!plugin) {
         return res.status(404).json({ message: 'Plugin not found' });
       }
@@ -154,10 +163,8 @@ const pluginController = {
     }
   },
 
-  // Lấy plugin theo category
-
-  // Upload file
-  uploadFile: async (req, res) => {
+  //Thêm plugin
+  addPlugin: async (req, res) => {
     try {
       const file = req.files['file']?.[0];
       const thumbnail = req.files['thumbnail']?.[0];
@@ -217,6 +224,7 @@ const pluginController = {
     }
   },
 
+  //dowload plugin
   downloadPlugin: async (req, res) => {
     try {
       const plugin = await Plugin.findByPk(req.params.id);
@@ -236,7 +244,7 @@ const pluginController = {
     }
   },
 
-  //check purchased
+  //kiểm tra plugin đã thanh toán chưa
   checkPurchased: async (req, res) => {
     const userId = req.user.id;
     const pluginId = req.params.id;

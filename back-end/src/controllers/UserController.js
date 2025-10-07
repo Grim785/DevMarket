@@ -7,7 +7,7 @@ const { User } = db;
 const allowedFields = ['username', 'email', 'password'];
 
 const userController = {
-  // Lấy 1 user
+  // Lấy theo Id
   fetchUser: async (req, res) => {
     try {
       const user = await User.findByPk(req.params.id);
@@ -24,6 +24,10 @@ const userController = {
   // Lấy tất cả user
   fetchAllUser: async (req, res) => {
     try {
+      //kiểm tra admin
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
       const users = await User.findAll();
       res.json(users);
     } catch (error) {
@@ -35,6 +39,10 @@ const userController = {
   // Thêm user mới
   addUser: async (req, res) => {
     try {
+      //kiểm tra admin
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
       const data = pickFields(req.body, allowedFields);
       const newUser = await User.create({ ...data });
       res.status(201).json(newUser);
@@ -65,6 +73,10 @@ const userController = {
   // Xóa user
   deleteUser: async (req, res) => {
     try {
+      //kiểm tra admin
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
       const deleted = await User.destroy({
         where: { id: req.params.id },
       });

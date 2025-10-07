@@ -15,6 +15,7 @@ const Category = sequelize.define(
   }
 );
 
+//tạo slug theo tên
 Category.beforeCreate((Category) => {
   Category.slug = slugify(Category.name, { lower: true, strict: true });
 });

@@ -16,11 +16,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ===== ROUTES =====
+//lấy plugin theo id
 router.get('/fetchplugin/:id', pluginController.fetchPlugin);
+//lấy tất cả plugins
 router.get('/fetchAllplugin', pluginController.fetchAllPlugin);
-
-router.post('/addplugin', authMiddleware(), pluginController.addPlugin);
-
+//update plugin
 router.put(
   '/updateplugin/:id',
   authMiddleware(),
@@ -30,25 +30,26 @@ router.put(
   ]), // nhận file từ input name="file"
   pluginController.updatePlugin
 );
-
+//xóa plugin
 router.delete(
   '/deleteplugins/:id',
   authMiddleware(),
   pluginController.deletePlugin
 );
 
+//thêm plugin
 router.post(
-  '/upload',
+  '/addplugin',
   authMiddleware(),
   upload.fields([
     { name: 'file', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
   ]),
-  pluginController.uploadFile
+  pluginController.addPlugin
 );
-
+//kiểm tra đã thanh toán plugin
 router.get('/:id/purchased', authMiddleware(), pluginController.checkPurchased);
-
+//dowload plugin
 router.get('/download/:id', authMiddleware(), pluginController.downloadPlugin);
 
 export default router;

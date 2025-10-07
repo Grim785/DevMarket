@@ -1,23 +1,28 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_URL; // sử dụng env
+
 const OrderHistory = () => {
   const { token, user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.title = 'Orders History';
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
     const fetchOrders = async () => {
       try {
-        const res = await fetch(
-          'http://localhost:4000/api/orders/fetchUserOrders',
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const res = await fetch(`${API_BASE}/orders/fetchUserOrders`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (!res.ok) {
           console.error('❌ Lỗi khi lấy orders:', res.status);
@@ -35,7 +40,7 @@ const OrderHistory = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [token]);
 
   if (loading)
     return (
@@ -101,7 +106,7 @@ const OrderHistory = () => {
             <div className="border-t mt-3 pt-3 flex justify-between items-center">
               <p className="text-gray-700 font-medium">Tổng cộng:</p>
               <p className="text-lg font-bold text-blue-600">
-                ${order.totalAmount.toFixed(2)}
+                ${Number(order.totalAmount || 0).toFixed(2)}
               </p>
             </div>
           </div>

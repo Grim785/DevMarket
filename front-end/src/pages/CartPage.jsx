@@ -4,75 +4,108 @@ import { FaTrashAlt } from 'react-icons/fa';
 import PaymentPage from './PaymentPage';
 import { AuthContext } from '../contexts/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
 const CartPage = () => {
   const { token, user } = useContext(AuthContext);
   const [items, setItems] = useState([]);
   const [checkout, setCheckout] = useState(false);
   const [clientSecret, setClientSecret] = useState('');
   const [orderId, setOrderId] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Cart';
+  }, []);
 
   // Load cart từ backend
   useEffect(() => {
     if (!token) return;
-    fetch('http://localhost:4000/api/cart', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
+
+    const fetchCart = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/cart`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
         const cartItems = data.plugins.map((plugin) => ({
           id: plugin.id,
           name: plugin.name,
           description: plugin.description,
           price: parseFloat(plugin.price) || 0,
           qty: 1,
-          img: plugin.thumbnail || 'https://via.placeholder.com/150',
+          img: plugin.thumbnail
+            ? plugin.thumbnail.startsWith('http')
+              ? plugin.thumbnail
+              : `${API_BASE}${plugin.thumbnail}`
+            : 'https://via.placeholder.com/150',
         }));
+
         setItems(cartItems);
-      })
-      .catch((err) => console.error(err));
+      } catch (err) {
+        console.error('Fetch cart error:', err);
+      }
+    };
+
+    fetchCart();
   }, [token]);
 
   // Xóa item khỏi giỏ
   const removeItem = async (id) => {
-    await fetch('http://localhost:4000/api/cart/remove', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ pluginId: id }),
-    });
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await fetch(`${API_BASE}/cart/remove`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pluginId: id }),
+      });
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      console.error('Remove item error:', err);
+    }
   };
 
   // Checkout
   const handleCheckout = async () => {
-    if (!token || !user) return;
+    if (!token || !user || items.length === 0) return;
 
-    // chuẩn bị products để gửi backend
+    setLoading(true);
     const products = items.map((item) => ({
       pluginId: item.id,
       price: item.price,
     }));
 
-    const res = await fetch(
-      'http://localhost:4000/api/payment/create-payment-intent',
-      {
+    try {
+      const res = await fetch(`${API_BASE}/payment/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ userId: user.id, products }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setClientSecret(data.clientSecret);
+        setOrderId(data.orderId);
+        setCheckout(true);
+      } else {
+        alert(data.message || 'Lỗi thanh toán');
       }
-    );
-    const data = await res.json();
-    setClientSecret(data.clientSecret);
-    setOrderId(data.orderId);
-    setCheckout(true);
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Lỗi kết nối server');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const subtotal = items.reduce((sum, i) => sum + i.price, 0);
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const fee = subtotal > 0 ? 2.5 : 0;
   const total = subtotal + fee;
 
@@ -139,10 +172,14 @@ const CartPage = () => {
         </div>
         <button
           onClick={handleCheckout}
-          disabled={items.length === 0}
-          className="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700"
+          disabled={items.length === 0 || loading}
+          className={`w-full mt-6 py-3 rounded-xl text-white ${
+            items.length === 0 || loading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          Checkout
+          {loading ? 'Processing...' : 'Checkout'}
         </button>
       </div>
     </div>

@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const API_BASE = import.meta.env.VITE_API_URL;
+
+  // Lấy login function từ context
+  const { login } = useContext(AuthContext);
+
+  useEffect(() => {
+    document.title = 'Login';
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -20,12 +29,13 @@ const LoginPage = () => {
       const data = await res.json();
 
       if (res.ok) {
-        // Lưu token
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Cập nhật context và localStorage
+        login(data.user, data.token);
+
         alert('Đăng nhập thành công!');
-        // điều hướng sang trang khác
-        if (data.user.username === 'admin') {
+
+        // Điều hướng
+        if (data.user.role === 'admin') {
           navigate('/admin');
         } else {
           navigate('/');
@@ -73,13 +83,14 @@ const LoginPage = () => {
         >
           Đăng nhập
         </button>
+
         <p className="mt-4 text-sm text-gray-600">
           Chưa có tài khoản?{' '}
           <Link to="/signup" className="text-blue-500 hover:underline">
             Đăng ký
           </Link>
         </p>
-        <p className="mt-4 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-600">
           <Link to="/forgot-password" className="text-blue-500 hover:underline">
             Quên mật khẩu?
           </Link>

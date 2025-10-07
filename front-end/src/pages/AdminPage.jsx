@@ -3,27 +3,44 @@ import AddOrEditPlugin from '../components/AddOrEditPlugin';
 import AddOrEditUser from '../components/AddOrEditUser';
 import AddOrEditCategory from '../components/AddOrEditCategory';
 import { AuthContext } from '../contexts/AuthContext';
-import { useSocket } from '../contexts/SocketContext'; // hook từ context Socket
+import { useSocket } from '../contexts/SocketContext';
+import { useNavigate } from 'react-router-dom';
 
 const TABS = ['plugins', 'users', 'orders', 'categories'];
 
-function AdminPage() {
+const AdminPage = () => {
+  const navigate = useNavigate();
   const { token, user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('plugins');
+
+  // State cho từng tab
   const [plugins, setPlugins] = useState([]);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
   const socket = useSocket();
+  const API_BASE = import.meta.env.VITE_API_URL;
 
-  const API_BASE = 'http://localhost:4000';
+  useEffect(() => {
+    document.title = 'Admin';
+  }, []);
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/'); // nếu không phải admin → redirect về homepage
+    }
+  }, [user]);
+
+  // =======================
   // Generic fetch function
-  const fetchData = async (endpoint, setter, key = null) => {
+  // =======================
+  const fetchData = async (endpoint, setter, key = 'data') => {
     setLoading(true);
     setError(null);
     try {
@@ -34,41 +51,46 @@ function AdminPage() {
         },
       });
       if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      // Nếu key được cung cấp, lấy mảng trong object
-      setter(key ? data[key] : data);
+      const result = await res.json();
+
+      // Nếu có key, lấy data[key] hoặc [] nếu không có
+      if (key && Array.isArray(result[key])) setter(result[key]);
+      else if (Array.isArray(result)) setter(result);
+      else setter([]);
     } catch (err) {
       console.error(err);
       setError(err.message);
+      setter([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // =======================
+  // Initial fetch
+  // =======================
   useEffect(() => {
-    fetchData('/api/plugins/fetchAllplugin', setPlugins); // trả thẳng array
-    fetchData('/api/users/fetchAllusers', setUsers); // trả thẳng array
-    fetchData('/api/orders/fetchAllOrders', setOrders, 'orders'); // lấy data.orders
-    fetchData('/api/categories/fetchAllCategories', setCategories); // lấy data.categories
+    fetchData('/plugins/fetchAllplugin', setPlugins);
+    fetchData('/users/fetchAllusers', setUsers);
+    fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+    fetchData('/categories/fetchAllCategories', setCategories);
   }, []);
 
+  // =======================
+  // Socket updates
+  // =======================
   useEffect(() => {
     if (!socket) return;
-    const handleNewUser = () => {
-      fetchData('/api/users/fetchAllusers', setUsers);
-    };
-
-    const handleNewOrder = () => {
-      fetchData('/api/orders/fetchAllOrders', setOrders, 'orders'); // lấy data.orders
-    };
-
-    const handleUpdateOrder = () => {
-      fetchData('/api/orders/fetchAllOrders', setOrders, 'orders'); // lấy data.orders
-    };
+    const handleNewUser = () => fetchData('/users/fetchAllusers', setUsers);
+    const handleNewOrder = () =>
+      fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+    const handleUpdateOrder = () =>
+      fetchData('/orders/fetchAllOrders', setOrders, 'orders');
 
     socket.on('newUser', handleNewUser);
     socket.on('newOrder', handleNewOrder);
     socket.on('updateOrder', handleUpdateOrder);
+
     return () => {
       socket.off('newUser', handleNewUser);
       socket.off('newOrder', handleNewOrder);
@@ -76,35 +98,21 @@ function AdminPage() {
     };
   }, [socket]);
 
-  // Xử lý xóa item
+  // =======================
+  // CRUD Handlers
+  // =======================
   const handleDelete = async (type, id) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/${type}/delete${type}/${id}`, {
+      const res = await fetch(`${API_BASE}/${type}/delete${type}/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
       });
-
-      // Kiểm tra nếu có body
-      let data = null;
-      const text = await res.text(); // đọc thô
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch (err) {
-          console.warn('Response is not valid JSON:', text);
-        }
-      }
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to delete');
-      }
-
-      // Reload lại dữ liệu sau khi xóa
+      if (!res.ok) throw new Error('Failed to delete');
       reloadTabData(type);
     } catch (err) {
       console.error(err);
@@ -112,31 +120,10 @@ function AdminPage() {
     }
   };
 
-  // Xử lý lưu (add hoặc edit)
   const handleSave = () => {
-    reloadTabData(activeTab); // reload tab hiện tại
+    reloadTabData(activeTab);
     setIsOpen(false);
     setEditingItem(null);
-  };
-
-  // Hàm reload dữ liệu từng tab
-  const reloadTabData = (tab) => {
-    switch (tab) {
-      case 'plugins':
-        fetchData('/api/plugins/fetchAllplugin', setPlugins);
-        break;
-      case 'users':
-        fetchData('/api/users/fetchAllusers', setUsers);
-        break;
-      case 'orders':
-        fetchData('/api/orders/fetchAllOrders', setOrders, 'orders');
-        break;
-      case 'categories':
-        fetchData('/api/categories/fetchAllCategories', setCategories);
-        break;
-      default:
-        break;
-    }
   };
 
   const handleEdit = (item) => {
@@ -149,7 +136,28 @@ function AdminPage() {
     setIsOpen(true);
   };
 
-  // Get current items based on active tab
+  const reloadTabData = (tab) => {
+    switch (tab) {
+      case 'plugins':
+        fetchData('/plugins/fetchAllplugin', setPlugins);
+        break;
+      case 'users':
+        fetchData('/users/fetchAllusers', setUsers);
+        break;
+      case 'orders':
+        fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+        break;
+      case 'categories':
+        fetchData('/categories/fetchAllCategories', setCategories);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // =======================
+  // Current items
+  // =======================
   const currentItems = () => {
     switch (activeTab) {
       case 'plugins':
@@ -165,18 +173,23 @@ function AdminPage() {
     }
   };
 
-  // Render table headers dynamically
+  // =======================
+  // Table headers
+  // =======================
   const renderTableHeader = () => {
     if (activeTab === 'plugins') return ['ID', 'Name', 'Price ($)', 'Actions'];
     if (activeTab === 'users') return ['ID', 'Username', 'Email', 'Actions'];
     if (activeTab === 'orders')
       return ['ID', 'User', 'Status', 'Total', 'Actions'];
     if (activeTab === 'categories') return ['ID', 'Name', 'Actions'];
+    return [];
   };
 
+  // =======================
+  // Render
+  // =======================
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
       <aside className="w-56 bg-gray-900 text-white p-5">
         <h2 className="text-xl font-bold mb-6">DevMarket Admin</h2>
         <ul className="space-y-2">
@@ -196,7 +209,6 @@ function AdminPage() {
         </ul>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-2xl font-semibold">
@@ -222,55 +234,58 @@ function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {currentItems().map((item) => (
-              <tr key={item.id} className="border-t">
-                {activeTab === 'plugins' && (
-                  <>
-                    <td className="px-4 py-2">{item.id}</td>
-                    <td className="px-4 py-2">{item.name}</td>
-                    <td className="px-4 py-2">{item.price}</td>
-                  </>
-                )}
-                {activeTab === 'users' && (
-                  <>
-                    <td className="px-4 py-2">{item.id}</td>
-                    <td className="px-4 py-2">{item.username}</td>
-                    <td className="px-4 py-2">{item.email}</td>
-                  </>
-                )}
-                {activeTab === 'orders' && (
-                  <>
-                    <td className="px-4 py-2">{item.id}</td>
-                    <td className="px-4 py-2">{item.userId}</td>
-                    <td className="px-4 py-2">{item.status}</td>
-                    <td className="px-4 py-2">{item.totalAmount}</td>
-                  </>
-                )}
-                {activeTab === 'categories' && (
-                  <>
-                    <td className="px-4 py-2">{item.id}</td>
-                    <td className="px-4 py-2">{item.name}</td>
-                  </>
-                )}
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(activeTab, item.id)}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {(Array.isArray(currentItems()) ? currentItems() : []).map(
+              (item) => (
+                <tr key={item.id} className="border-t">
+                  {activeTab === 'plugins' && (
+                    <>
+                      <td className="px-4 py-2">{item.id}</td>
+                      <td className="px-4 py-2">{item.name}</td>
+                      <td className="px-4 py-2">{item.price || '-'}</td>
+                    </>
+                  )}
+                  {activeTab === 'users' && (
+                    <>
+                      <td className="px-4 py-2">{item.id}</td>
+                      <td className="px-4 py-2">{item.username}</td>
+                      <td className="px-4 py-2">{item.email}</td>
+                    </>
+                  )}
+                  {activeTab === 'orders' && (
+                    <>
+                      <td className="px-4 py-2">{item.id}</td>
+                      <td className="px-4 py-2">{item.userId}</td>
+                      <td className="px-4 py-2">{item.status}</td>
+                      <td className="px-4 py-2">{item.totalAmount}</td>
+                    </>
+                  )}
+                  {activeTab === 'categories' && (
+                    <>
+                      <td className="px-4 py-2">{item.id}</td>
+                      <td className="px-4 py-2">{item.name}</td>
+                    </>
+                  )}
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded mr-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(activeTab, item.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </main>
+
       {isOpen && activeTab === 'plugins' && (
         <AddOrEditPlugin
           plugin={editingItem}
@@ -294,6 +309,6 @@ function AdminPage() {
       )}
     </div>
   );
-}
+};
 
 export default AdminPage;

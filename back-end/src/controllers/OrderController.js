@@ -5,6 +5,7 @@ const orderController = {
   //lấy danh order của tất cả
   getAllOrders: async (req, res) => {
     try {
+      //kiểm tra admin
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -19,6 +20,7 @@ const orderController = {
       res.status(500).json({ message: 'Server error', error: error.message });
     }
   },
+
   // Lấy danh sách đơn hàng của user
   getOrders: async (req, res) => {
     try {
@@ -43,32 +45,32 @@ const orderController = {
   },
 
   // Tạo đơn hàng từ giỏ
-  createOrder: async (req, res) => {
-    try {
-      const cart = await req.user.getCart();
-      const plugins = await cart.getPlugins();
+  // createOrder: async (req, res) => {
+  //   try {
+  //     const cart = await req.user.getCart();
+  //     const plugins = await cart.getPlugins();
 
-      if (plugins.length === 0) {
-        return res.status(400).json({ message: 'Cart is empty' });
-      }
+  //     if (plugins.length === 0) {
+  //       return res.status(400).json({ message: 'Cart is empty' });
+  //     }
 
-      const order = await req.user.createOrder();
+  //     const order = await req.user.createOrder();
 
-      await order.addPlugins(
-        plugins.map((plugin) => {
-          plugin.orderItem = { priceAtPurchase: plugin.price };
-          return plugin;
-        })
-      );
+  //     await order.addPlugins(
+  //       plugins.map((plugin) => {
+  //         plugin.orderItem = { priceAtPurchase: plugin.price };
+  //         return plugin;
+  //       })
+  //     );
 
-      // Xóa giỏ hàng sau khi đặt
-      await cart.setPlugins(null);
+  //     // Xóa giỏ hàng sau khi đặt
+  //     await cart.setPlugins(null);
 
-      return res.status(201).json({ message: 'Order created', order });
-    } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
-    }
-  },
+  //     return res.status(201).json({ message: 'Order created', order });
+  //   } catch (error) {
+  //     res.status(500).json({ message: 'Server error', error: error.message });
+  //   }
+  // },
 };
 
 export default orderController;

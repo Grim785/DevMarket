@@ -3,8 +3,11 @@ import { AuthContext } from '../contexts/AuthContext';
 
 const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
   const { token, user } = useContext(AuthContext);
+  const API_BASE = import.meta.env.VITE_API_URL;
+
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -14,36 +17,43 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
     downloads: 0,
     rating: 0,
     status: 'pending',
-    fileUrl: '',
+    file: '',
     thumbnail: '',
     categoryId: '',
     userId: user.id,
   });
 
+  // Load categories & users
   useEffect(() => {
-    fetch('http://localhost:4000/api/categories/fetchAllCategories', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then(setCategories)
-      .catch((err) => console.error('Error fetching categories:', err));
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/categories/fetchAllCategories`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setCategories(data);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
 
-    fetch('http://localhost:4000/api/users/fetchAllusers', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then(setUsers)
-      .catch((err) => console.error('Error fetching users:', err));
-  }, []);
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/fetchAllusers`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setUsers(data);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
+    };
 
+    fetchCategories();
+    fetchUsers();
+  }, [API_BASE, token]);
+
+  // Set form data when editing
   useEffect(() => {
     if (plugin) {
       setFormData({
@@ -61,15 +71,12 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
         userId: user.id,
       });
     }
-  }, [plugin]);
+  }, [plugin, user.id]);
 
   const handleChange = (e) => {
     const { name, value, files, type } = e.target;
     if (type === 'file') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0], // ❌ sử dụng name để lưu đúng vào file hoặc thumbnail
-      }));
+      setFormData((prev) => ({ ...prev, [name]: files[0] }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -77,41 +84,45 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const data = new FormData();
-      // Append tất cả field
       Object.keys(formData).forEach((key) => {
-        if (formData[key]) {
-          data.append(key, formData[key]);
-        }
+        if (formData[key]) data.append(key, formData[key]);
       });
 
-      console.log(formData);
+      const url = plugin
+        ? `${API_BASE}/plugins/updateplugin/${plugin.id}`
+        : `${API_BASE}/plugins/addplugin`;
 
-      const res = await fetch(
-        plugin
-          ? `http://localhost:4000/api/plugins/updateplugin/${plugin.id}`
-          : 'http://localhost:4000/api/plugins/upload',
-        {
-          method: plugin ? 'PUT' : 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            // ❌ KHÔNG set Content-Type, để browser tự set
-          },
-          body: data,
+      const res = await fetch(url, {
+        method: plugin ? 'PUT' : 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`, // Không set Content-Type
+        },
+        body: data,
+      });
+
+      // Parse response an toàn
+      let result = null;
+      const text = await res.text();
+      if (text) {
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { message: text };
         }
-      );
-
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.message || 'Failed to save plugin');
       }
+
+      if (!res.ok) throw new Error(result.message || 'Failed to save plugin');
 
       onSave(result);
     } catch (err) {
       console.error('Error saving plugin:', err);
       alert('❌ ' + (err.message || 'Failed to save plugin'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,7 +181,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
 
-          {/* Author dropdown */}
           <select
             name="author"
             value={formData.author}
@@ -179,14 +189,13 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <option value="">Select Author</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.username}
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.username}
               </option>
             ))}
           </select>
 
-          {/* Category dropdown */}
           <select
             name="categoryId"
             value={formData.categoryId}
@@ -195,14 +204,13 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <option value="">Select Category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
           </select>
 
-          {/* Status radio */}
           <div className="flex gap-2 items-center">
             {['pending', 'approved', 'rejected'].map((status) => (
               <label key={status} className="flex items-center gap-1">
@@ -219,14 +227,12 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             ))}
           </div>
 
-          {/* File upload */}
           <input
             type="file"
             name="file"
             onChange={handleChange}
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-
           <input
             type="file"
             name="thumbnail"
@@ -243,11 +249,13 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
               type="submit"
-              className="px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
+              disabled={loading}
+              className={`px-4 py-2 rounded text-white ${
+                loading ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
             >
-              Save
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>

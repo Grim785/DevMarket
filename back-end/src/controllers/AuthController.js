@@ -11,6 +11,7 @@ const authController = {
       const { username, password } = req.body;
 
       const user = await User.findOne({ where: { username } });
+
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -21,6 +22,7 @@ const authController = {
       }
 
       const token = generateToken({ id: user.id, username: user.username });
+
       return res.json({
         token,
         user: {
@@ -40,20 +42,27 @@ const authController = {
     try {
       const { username, email, password } = req.body;
 
+      //kiểm tra user có tồn tại
       const existingUser = await User.findOne({
         where: { email },
       });
+
       if (existingUser) {
         return res.status(400).json({ message: 'Email already registered' });
       }
 
+      //kiểm tra username đã có chưa
       const existingUsername = await User.findOne({ where: { username } });
+
       if (existingUsername) {
         return res.status(400).json({ message: 'Username already taken' });
       }
 
+      //tạo user
       const newUser = await User.create({ username, email, password });
       await newUser.createCart(); // Tạo giỏ hàng rỗng cho user mới
+
+      //tạo token
       const token = generateToken({
         id: newUser.id,
         username: newUser.username,
@@ -66,9 +75,11 @@ const authController = {
           id: newUser.id,
           email: newUser.email,
           username: newUser.username,
+          role: newUser.role,
         },
       });
 
+      //gọi socket
       io.emit('newUser', newUser);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error: error.message });
@@ -76,13 +87,13 @@ const authController = {
   },
 
   // Logout
-  logout: async (req, res) => {
-    try {
-      res.json({ message: 'Logout successful' });
-    } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
-    }
-  },
+  // logout: async (req, res) => {
+  //   try {
+  //     res.json({ message: 'Logout successful' });
+  //   } catch (error) {
+  //     res.status(500).json({ message: 'Server error', error: error.message });
+  //   }
+  // },
 };
 
 export default authController;

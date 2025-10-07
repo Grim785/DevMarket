@@ -2,20 +2,25 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 
-function CategorySidebar({ isOpen, setIsOpen }) {
+const CategorySidebar = ({ isOpen, setIsOpen }) => {
   const socket = useSocket();
   const [categories, setCategories] = useState([]);
+  const API_BASE = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = () => {
-    fetch('http://localhost:4000/api/categories/fetchAllCategories')
-      .then((res) => res.json())
-      .then((data) => setCategories(data))
-      .catch((err) => console.error(err));
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/categories/fetchAllCategories`);
+      const data = await res.json();
+      setCategories(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
-
+  //socket
   useEffect(() => {
     if (!socket) return;
 
@@ -39,7 +44,7 @@ function CategorySidebar({ isOpen, setIsOpen }) {
       socket.off('updateCategory', handleUpdateCate);
       socket.off('deleteCategory', handleDeleteCate);
     };
-  });
+  }, [socket]);
 
   return (
     <>
@@ -74,6 +79,6 @@ function CategorySidebar({ isOpen, setIsOpen }) {
       </div>
     </>
   );
-}
+};
 
 export default CategorySidebar;

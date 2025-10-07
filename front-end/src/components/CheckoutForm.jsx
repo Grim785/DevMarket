@@ -4,13 +4,15 @@ import {
   useElements,
   PaymentElement,
 } from '@stripe/react-stripe-js';
+import { useNavigate } from 'react-router-dom';
 
-export default function CheckoutForm({ clientSecret, orderId }) {
+const CheckoutForm = ({ clientSecret, orderId }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false); // trạng thái thanh toán thành công
   const [errorMsg, setErrorMsg] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,17 +22,19 @@ export default function CheckoutForm({ clientSecret, orderId }) {
     setErrorMsg('');
 
     try {
-      const { paymentIntent, error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/orders`, // không redirect
+          return_url: `${window.location.origin}/orders`, // ✅ redirect chính xác
         },
+        redirect: 'if_required', // ✅ tránh reload toàn trang khi không cần
       });
 
       if (error) {
         setErrorMsg(error.message);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        setSuccess(true); // hiển thị popup
+        setSuccess(true);
+        setTimeout(() => navigate('/orders'), 1500); // ✅ chuyển trang sau 1.5s
       }
     } catch (err) {
       setErrorMsg(err.message);
@@ -56,11 +60,13 @@ export default function CheckoutForm({ clientSecret, orderId }) {
         <button
           type="submit"
           disabled={!stripe || loading}
-          className="w-full mt-4 bg-green-600 text-white py-3 rounded-xl hover:bg-green-700"
+          className="w-full mt-4 bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition"
         >
           {loading ? 'Processing...' : 'Pay Now'}
         </button>
       </form>
     </div>
   );
-}
+};
+
+export default CheckoutForm;

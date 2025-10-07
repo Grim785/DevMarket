@@ -1,32 +1,54 @@
 import { useEffect, useState } from 'react';
 import PluginModal from '../components/PluginModal';
-import { useSocket } from '../contexts/SocketContext'; // hook từ context Socket
+import { useSocket } from '../contexts/SocketContext';
+
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const HomePage = () => {
   const [plugins, setPlugins] = useState([]);
-  const socket = useSocket(); // Lấy socket từ context
+  const socket = useSocket();
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 6;
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/plugins/fetchAllplugin')
-      .then((res) => res.json())
-      .then(setPlugins)
-      .catch((err) => console.error('Error fetching plugins:', err));
+    document.title = 'Home';
   }, []);
 
-  // --- real-time với socket ---
+  // --- Fetch plugin theo trang ---
+  useEffect(() => {
+    const fetchPlugins = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/plugins/fetchAllplugin?page=${page}&limit=${limit}`
+        );
+        if (!res.ok) throw new Error('Lỗi khi tải dữ liệu plugins.');
+        const data = await res.json();
+        setPlugins(data.data || []);
+        setTotalPages(data.totalPages || 1);
+      } catch (err) {
+        console.error('Error fetching plugins:', err);
+      }
+    };
+    fetchPlugins();
+  }, [page]);
+
+  // --- Real-time socket ---
   useEffect(() => {
     if (!socket) return;
+
     const handleNewPlugin = (plugin) => {
-      setPlugins((prev) => [...prev, plugin]);
+      setPlugins((prev) => [plugin, ...prev.slice(0, limit - 1)]);
     };
 
-    const handleDeletePlugin = (deletedPluginData) => {
-      setPlugins((prev) => prev.filter((p) => p.id !== deletedPluginData.id));
+    const handleDeletePlugin = (deletedPlugin) => {
+      setPlugins((prev) => prev.filter((p) => p.id !== deletedPlugin.id));
     };
 
     const handleUpdatePlugin = (plugin) => {
       setPlugins((prev) => prev.map((p) => (p.id === plugin.id ? plugin : p)));
     };
+
     socket.on('newPlugin', handleNewPlugin);
     socket.on('deletePlugin', handleDeletePlugin);
     socket.on('updatePlugin', handleUpdatePlugin);
@@ -44,10 +66,42 @@ const HomePage = () => {
         Featured Plugins ({plugins.length})
       </h2>
       <hr className="my-2 font-bold" />
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {plugins.map((plugin) => (
           <PluginModal key={plugin.id} plugin={plugin} />
         ))}
+      </div>
+
+      {/* --- Pagination control --- */}
+      <div className="flex justify-center items-center mt-6 space-x-4">
+        <button
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className={`px-4 py-2 rounded-lg ${
+            page === 1
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          Prev
+        </button>
+
+        <span className="font-medium text-lg">
+          Page {page} / {totalPages}
+        </span>
+
+        <button
+          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+          disabled={page === totalPages}
+          className={`px-4 py-2 rounded-lg ${
+            page === totalPages
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          Next
+        </button>
       </div>
     </div>
   );

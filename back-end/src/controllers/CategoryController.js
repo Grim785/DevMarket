@@ -2,6 +2,7 @@ import db from '../models/index.js';
 import { io } from '../index.js';
 import { Socket } from 'socket.io';
 const CategoryController = {
+  // lấy tất cả category
   getAllCategories: async (req, res) => {
     try {
       const categories = await db.Category.findAll();
@@ -12,18 +13,24 @@ const CategoryController = {
     }
   },
 
+  //lấy plugins theo category
   getPluginsByCategory: async (req, res) => {
     try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 6;
+      const offset = (page - 1) * limit;
       const { slug } = req.params;
 
-      // 🔍 Tìm category theo slug
+      // Tìm category theo slug
       const category = await db.Category.findOne({ where: { slug } });
       if (!category) {
         return res.status(404).json({ message: 'Category not found' });
       }
 
-      // 🔌 Lấy plugin theo categoryId
-      const plugins = await db.Plugin.findAll({
+      // Lấy plugin theo categoryId
+      const { count, rows } = await db.Plugin.findAndCountAll({
+        offset,
+        limit,
         where: { categoryId: category.id },
         include: [
           {
@@ -37,18 +44,31 @@ const CategoryController = {
             attributes: ['id', 'name', 'slug'],
           },
         ],
+        order: [['createdAt', 'DESC']],
       });
 
-      res.json({ category: category.name, plugins });
+      //trả dữ liệu về
+      res.json({
+        category: category.name,
+        data: rows,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+        totalItems: count,
+      });
     } catch (error) {
       console.error('Error fetching plugins by category:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 
+  //tạo category
   createCategory: async (req, res) => {
     const { name, description } = req.body;
     try {
+      //kiểm tra admin
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
       const newCategory = await db.Category.create({ name, description });
 
       io.emit('newCategory', newCategory);
@@ -59,17 +79,26 @@ const CategoryController = {
     }
   },
 
+  //cập nhật category
   updateCategory: async (req, res) => {
+    //kiểm tra admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
     const { id } = req.params;
     const { name, description } = req.body;
     try {
+      //tìm category
       const category = await db.Category.findByPk(id);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
+
+      //giữ lại dữ liệu cũ nếu không có dữ liệu truyền vào
       category.name = name || category.name;
       category.description = description || category.description;
       await category.save();
+
       res.json(category);
       io.emit('updateCategory', category);
     } catch (error) {
@@ -78,17 +107,26 @@ const CategoryController = {
     }
   },
 
+  //xóa category
   deleteCategory: async (req, res) => {
     const { id } = req.params;
     try {
+      //kiểm tra admin
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
       const category = await db.Category.findByPk(id);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
+
+      //biến lưu category đã xóa
       const categorydelete = {
         id: category.id,
         name: category.name,
       };
+
       await category.destroy();
       res.json({ message: 'Category deleted successfully' });
       io.emit('deleteCategory', categorydelete);

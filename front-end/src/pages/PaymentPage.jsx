@@ -1,15 +1,17 @@
 // src/pages/PaymentPage.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../components/CheckoutForm';
 
-const stripePromise = loadStripe(
-  'pk_test_51SE7UwIHJxdFUQDAlXcpKOKPMp3BIxGPjw7CTswbQUtuWzyFH7AvYd8sX4NqkNtzEH2a8RNwOeQD2RFHMj3mO0Xk006eVHZQkR'
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY);
 
 export default function PaymentPage({ clientSecret, orderId }) {
   const options = { clientSecret };
+
+  useEffect(() => {
+    document.title = 'Payment';
+  }, []);
 
   return (
     <div className="container mx-auto p-6">

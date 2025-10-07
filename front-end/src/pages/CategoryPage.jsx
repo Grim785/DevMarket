@@ -2,48 +2,62 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext'; // hook từ context Socket
 
+const API_BASE = import.meta.env.VITE_API_URL; // có thể dùng env nếu cần
+
 const CategoryPage = () => {
   const { slug } = useParams();
   const socket = useSocket(); // Lấy socket từ context
   const [categoryName, setCategoryName] = useState('');
   const [plugins, setPlugins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 6;
 
   useEffect(() => {
+    document.title = `Categories`;
+  }, []);
+
+  // --- Fetch dữ liệu từ server ---
+  useEffect(() => {
+    const fetchPlugins = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `${API_BASE}/categories/${slug}?page=${page}&limit=${limit}`
+        );
+        if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
+        const data = await res.json();
+        setCategoryName(data.category);
+        setPlugins(data.data || []);
+        setTotalPages(data.totalPages);
+      } catch (error) {
+        console.error('Error fetching category plugins:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchPlugins();
-  }, [slug]);
+  }, [slug, page]);
 
-  const fetchPlugins = async () => {
-    try {
-      const res = await fetch(`http://localhost:4000/api/categories/${slug}`);
-      if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
-      const data = await res.json();
-      setCategoryName(data.category);
-      setPlugins(data.plugins || []);
-    } catch (error) {
-      console.error('Error fetching category plugins:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- real-time với socket ---
+  // --- Real-time WebSocket ---
   useEffect(() => {
     if (!socket) return;
+
     const handleNewPlugin = (plugin) => {
-      // Chỉ thêm plugin nếu cùng category
       if (plugin.category === slug) {
-        setPlugins((prev) => [...prev, plugin]);
+        setPlugins((prev) => [plugin, ...prev]);
       }
     };
 
-    const handleDeletePlugin = (deletedPluginData) => {
-      setPlugins((prev) => prev.filter((p) => p.id !== deletedPluginData.id));
+    const handleDeletePlugin = (deletedPlugin) => {
+      setPlugins((prev) => prev.filter((p) => p.id !== deletedPlugin.id));
     };
 
     const handleUpdatePlugin = (plugin) => {
       setPlugins((prev) => prev.map((p) => (p.id === plugin.id ? plugin : p)));
     };
+
     socket.on('newPlugin', handleNewPlugin);
     socket.on('deletePlugin', handleDeletePlugin);
     socket.on('updatePlugin', handleUpdatePlugin);
@@ -55,6 +69,7 @@ const CategoryPage = () => {
     };
   }, [socket, slug]);
 
+  // --- Loading & Empty State ---
   if (loading)
     return (
       <div className="flex justify-center items-center h-64">
@@ -79,6 +94,7 @@ const CategoryPage = () => {
       </Link>
       <h1 className="text-3xl font-bold mb-8 text-center">{categoryName}</h1>
 
+      {/* Plugin Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {plugins.map((plugin) => (
           <div
@@ -89,8 +105,8 @@ const CategoryPage = () => {
               src={
                 plugin.thumbnail
                   ? plugin.thumbnail.startsWith('http')
-                    ? plugin.thumbnail // đã là URL đầy đủ
-                    : `http://localhost:4000${plugin.thumbnail}` // prepend domain
+                    ? plugin.thumbnail
+                    : `${API_BASE}${plugin.thumbnail}`
                   : 'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
               }
               alt={plugin.name}
@@ -104,7 +120,7 @@ const CategoryPage = () => {
                 {plugin.description}
               </p>
               <p className="text-blue-600 font-semibold mb-3">
-                {Number(plugin.price)?.toFixed(2)}
+                {Number(plugin.price).toFixed(2)}
               </p>
               <Link
                 to={`/plugin/${plugin.id}/${plugin.slug}`}
@@ -115,6 +131,37 @@ const CategoryPage = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center items-center mt-6 space-x-4">
+        <button
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className={`px-4 py-2 rounded-lg ${
+            page === 1
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          Prev
+        </button>
+
+        <span className="font-medium text-lg">
+          Page {page} / {totalPages}
+        </span>
+
+        <button
+          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+          disabled={page === totalPages}
+          className={`px-4 py-2 rounded-lg ${
+            page === totalPages
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          Next
+        </button>
       </div>
     </div>
   );

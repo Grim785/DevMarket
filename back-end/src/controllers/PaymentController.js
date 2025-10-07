@@ -8,7 +8,7 @@ dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const PaymentController = {
-  // 1️⃣ Tạo PaymentIntent + Order + OrderItems
+  // Tạo PaymentIntent + Order + OrderItems
   createPaymentIntent: async (req, res) => {
     try {
       const { userId, products } = req.body;
@@ -22,6 +22,7 @@ const PaymentController = {
         products.reduce((sum, item) => sum + item.price, 0) * 100
       );
 
+      //Tính tổng tiền (USD $)
       const totalUSD = products.reduce((sum, item) => sum + item.price, 0);
 
       // Tạo PaymentIntent trên Stripe
@@ -61,7 +62,7 @@ const PaymentController = {
     }
   },
 
-  // 2️⃣ Webhook Stripe để cập nhật trạng thái thanh toán
+  // Webhook Stripe để cập nhật trạng thái thanh toán
   stripeWebhook: async (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;
@@ -81,7 +82,7 @@ const PaymentController = {
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
 
-      // 1️⃣ Update order status
+      // Update order status thành Paid
       const order = await db.Order.findOne({
         where: { paymentIntentId: paymentIntent.id },
       });
@@ -95,9 +96,6 @@ const PaymentController = {
           await db.CartItem.destroy({ where: { cartId: cart.id } });
         }
 
-        console.log(
-          `Order ${order.id} paid. Cart cleared for user ${order.userId}.`
-        );
         io.emit('updateOrder', order);
       }
     }

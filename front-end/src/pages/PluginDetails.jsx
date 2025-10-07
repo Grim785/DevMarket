@@ -7,25 +7,29 @@ import { useEffect, useState, useContext } from 'react';
 import PaymentPage from './PaymentPage';
 import { AuthContext } from '../contexts/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
 function PluginDetails() {
   const { token, user } = useContext(AuthContext);
   const [plugin, setPlugin] = useState({});
   const { id } = useParams();
-  const isUserLoggedIn = !!localStorage.getItem('token');
+  const isUserLoggedIn = !!token;
   const [checkout, setCheckout] = useState(false);
   const [clientSecret, setClientSecret] = useState('');
   const [orderId, setOrderId] = useState(null);
   const [purchased, setPurchased] = useState(false);
 
   useEffect(() => {
+    document.title = 'Plugins';
+  }, []);
+
+  useEffect(() => {
     const fetchPlugin = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:4000/api/plugins/fetchplugin/${id}`
-        );
+        const res = await fetch(`${API_BASE}/plugins/fetchplugin/${id}`);
         if (!res.ok) throw new Error('Failed to fetch plugin');
         const data = await res.json();
-        setPlugin(data || {}); // lấy plugin từ response
+        setPlugin(data || {});
       } catch (err) {
         console.error('Error fetching plugin details:', err);
       }
@@ -38,16 +42,13 @@ function PluginDetails() {
       if (!token) return;
 
       try {
-        const res = await fetch(
-          `http://localhost:4000/api/plugins/${id}/purchased`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await fetch(`${API_BASE}/plugins/${id}/purchased`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!res.ok) throw new Error('Failed to check purchase');
         const data = await res.json();
-        setPurchased(data.purchased); // true/false
+        setPurchased(data.purchased);
       } catch (err) {
         console.error('Error checking purchase:', err);
       }
@@ -58,13 +59,10 @@ function PluginDetails() {
 
   const handleDownload = async (id, name) => {
     try {
-      const res = await fetch(
-        `http://localhost:4000/api/plugins/download/${id}`,
-        {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }
-      );
+      const res = await fetch(`${API_BASE}/plugins/download/${id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error('Download failed');
 
       const blob = await res.blob();
@@ -85,32 +83,28 @@ function PluginDetails() {
     if (!token || !user) return;
 
     if (Number(plugin.price) === 0) {
-      // Plugin Free, chỉ download
       handleDownload(plugin.id, plugin.name);
       return;
     }
 
     try {
-      const res = await fetch(
-        'http://localhost:4000/api/payment/create-payment-intent',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            products: [
-              {
-                pluginId: plugin.id,
-                name: plugin.name,
-                price: Number(plugin.price),
-              },
-            ],
-          }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/payment/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          products: [
+            {
+              pluginId: plugin.id,
+              name: plugin.name,
+              price: Number(plugin.price),
+            },
+          ],
+        }),
+      });
 
       if (!res.ok) throw new Error('Failed to create payment intent');
       const data = await res.json();
@@ -123,29 +117,20 @@ function PluginDetails() {
     }
   };
 
-  // Nếu đang checkout, render trang Payment
-  if (checkout && clientSecret && orderId) {
-    return <PaymentPage clientSecret={clientSecret} orderId={orderId} />;
-  }
-
   const handleAddToCart = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/api/cart/add`, {
+      const res = await fetch(`${API_BASE}/cart/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+          Authorization: `Bearer ${token || ''}`,
         },
         body: JSON.stringify({ pluginId: Number(id) }),
       });
 
       const data = await res.json();
-
-      if (res.ok) {
-        alert('✅ Added to cart!');
-      } else {
-        alert('❌ Error: ' + (data.message || 'Unknown error'));
-      }
+      if (res.ok) alert('✅ Added to cart!');
+      else alert('❌ Error: ' + (data.message || 'Unknown error'));
     } catch (err) {
       console.error('Error adding to cart:', err);
       alert('⚠️ Failed to add to cart, please try again.');
@@ -157,6 +142,10 @@ function PluginDetails() {
     ? reviews.reduce((sum, r) => sum + r.stars, 0) / reviews.length
     : 0;
 
+  if (checkout && clientSecret && orderId) {
+    return <PaymentPage clientSecret={clientSecret} orderId={orderId} />;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <Link to="/" className="text-blue-500 mb-4 inline-block">
@@ -164,21 +153,19 @@ function PluginDetails() {
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Preview */}
         <div className="bg-white p-6">
           <img
             src={
               plugin.thumbnail
                 ? plugin.thumbnail.startsWith('http')
-                  ? plugin.thumbnail // đã là URL đầy đủ
-                  : `http://localhost:4000${plugin.thumbnail}` // prepend domain
+                  ? plugin.thumbnail
+                  : `${API_BASE}${plugin.thumbnail}`
                 : 'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
             }
             className="w-full h-64 sm:object-cover object-contain mb-4 rounded-lg"
           />
         </div>
 
-        {/* Info */}
         <div className="bg-white p-6">
           <h1 className="text-2xl font-bold mb-2">{plugin.name}</h1>
           <p className="text-gray-600 mb-2">by {plugin.author}</p>
@@ -212,17 +199,10 @@ function PluginDetails() {
           <div className="flex items-center mb-4">
             {isUserLoggedIn ? (
               <>
-                {purchased ? (
+                {purchased || Number(plugin.price) === 0 ? (
                   <button
                     onClick={() => handleDownload(plugin.id, plugin.name)}
                     className="bg-green-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
-                  >
-                    <FaDownload /> Download
-                  </button>
-                ) : Number(plugin.price) === 0 ? (
-                  <button
-                    onClick={() => handleDownload(plugin.id, plugin.name)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded mr-2 inline-flex items-center gap-2"
                   >
                     <FaDownload /> Download
                   </button>
@@ -234,8 +214,7 @@ function PluginDetails() {
                     {plugin.price} $
                   </button>
                 )}
-
-                {!purchased && (
+                {!purchased && Number(plugin.price) > 0 && (
                   <button
                     className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
                     onClick={handleAddToCart}
@@ -255,7 +234,6 @@ function PluginDetails() {
           </div>
         </div>
 
-        {/* Description */}
         <div className="bg-white p-6 col-span-1 md:col-span-2">
           <h2 className="text-xl font-bold mb-4">Description</h2>
           <div className="prose prose-sm text-gray-600">
@@ -268,7 +246,6 @@ function PluginDetails() {
           </div>
         </div>
 
-        {/* Reviews */}
         <div className="bg-white p-6 col-span-1 md:col-span-2">
           <h2 className="text-xl font-bold mb-4">Reviews</h2>
           <p className="text-yellow-500 mb-4">
