@@ -16,7 +16,6 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
-console.log(process.env.FRONTEND_URL);
 // ✅ Middleware
 app.use(
   cors({
