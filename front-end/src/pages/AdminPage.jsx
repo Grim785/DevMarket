@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
-import AddOrEditPlugin from '../components/AddOrEditPlugin';
-import AddOrEditUser from '../components/AddOrEditUser';
-import AddOrEditCategory from '../components/AddOrEditCategory';
+import AddOrEditPlugin from '../components/AddorEditPlugin';
+import AddOrEditUser from '../components/AddorEditUser';
+import AddOrEditCategory from '../components/AddorEditCategory';
 import { AuthContext } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useNavigate } from 'react-router-dom';
