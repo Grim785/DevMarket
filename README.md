@@ -68,6 +68,7 @@ DB_NAME=devmarket
 FRONTEND_URL=http://localhost:5173
 JWT_SECRET=your_jwt_secret
 STRIPE_SECRET_KEY=your_stripe_secret
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 NODE_ENV=development
 ```
 
@@ -95,6 +96,8 @@ npm install
 ```env
 VITE_API_URL=http://localhost:4000/api
 VITE_SOCKET_URL=http://localhost:4000
+VITE_ENV=development
+VITE_STRIPE_KEY=your_publishable_stripe_key
 ```
 
 #### 3.2 Run frontend
@@ -120,6 +123,10 @@ npm run dev
 
 - Run `seed.js` to populate initial users, categories, and plugins (ensure DB is connected).
 
+```bash
+cd back-end
+node src/seeders/seed.js
+```
 ---
 
 ## 🔑 Authentication
