@@ -42,7 +42,7 @@ const authController = {
     try {
       const { username, email, password } = req.body;
 
-      //kiểm tra user có tồn tại
+      //kiểm tra email có tồn tại
       const existingUser = await User.findOne({
         where: { email },
       });

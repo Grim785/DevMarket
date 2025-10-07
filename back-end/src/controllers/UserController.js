@@ -4,7 +4,7 @@ import { pickFields } from '../utils/pickFields.js';
 const { User } = db;
 
 // field cho phép client thao tác
-const allowedFields = ['username', 'email', 'password'];
+const allowedFields = ['username', 'email', 'password', 'role'];
 
 const userController = {
   // Lấy theo Id
@@ -44,6 +44,23 @@ const userController = {
         return res.status(403).json({ message: 'Access denied' });
       }
       const data = pickFields(req.body, allowedFields);
+
+      const existingUser = await User.findOne({
+        where: { email: data.email },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+
+      //kiểm tra username đã có chưa
+      const existingUsername = await User.findOne({
+        where: { username: data.username },
+      });
+
+      if (existingUsername) {
+        return res.status(400).json({ message: 'Username already taken' });
+      }
       const newUser = await User.create({ ...data });
       res.status(201).json(newUser);
     } catch (error) {
