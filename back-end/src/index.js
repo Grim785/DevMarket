@@ -11,16 +11,16 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
+// ✅ Middleware
 app.use(
   cors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   })
 );
 
-// Bỏ qua express.json() cho route webhook
+// ✅ Bỏ qua express.json() cho route webhook (Stripe cần raw body)
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/payment/webhook') {
     next();
@@ -29,26 +29,29 @@ app.use((req, res, next) => {
   }
 });
 
+// ✅ Static file
 app.use('/api/uploads', express.static('uploads'));
-// Routes
+
+// ✅ Routes
 app.use('/api', router);
 
-// Tạo HTTP server từ Express app
+// ✅ HTTP server
 const server = http.createServer(app);
 
-// Tạo Socket.IO server
+// ✅ Socket.IO cấu hình chuẩn
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
   },
 });
 
-// Khi có client kết nối Socket.IO
+// ✅ Lắng nghe kết nối socket
 io.on('connection', (socket) => {
   if (process.env.NODE_ENV !== 'production') {
-    console.log('✅ Connected to Socket.IO server');
+    console.log('✅ Connected to Socket.IO server:', socket.id);
   }
+
   socket.on('disconnect', () => {
     if (process.env.NODE_ENV !== 'production') {
       console.log('❌ Client disconnected:', socket.id);
@@ -56,25 +59,25 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server only if DB is connected
+// ✅ Kết nối DB rồi mới khởi động server
 const startServer = async () => {
   try {
     await db.sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
+    console.log('✅ Database connected.');
 
-    await db.sequelize.sync(); // sync models
-    console.log('✅ All models synchronized successfully.');
+    await db.sequelize.sync();
+    console.log('✅ Models synchronized.');
 
     server.listen(port, () => {
-      console.log(`🚀 Server is running at http://localhost:${port}`);
+      console.log(`🚀 Server running at http://localhost:${port}`);
     });
   } catch (error) {
-    console.error('❌ Unable to connect to the database:', error);
+    console.error('❌ Database connection failed:', error);
     process.exit(1);
   }
 };
 
 startServer();
 
-// Export io nếu cần dùng ở các route khác
+// ✅ Xuất io cho controller khác (real-time update)
 export { io };
