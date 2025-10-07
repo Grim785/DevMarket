@@ -5,11 +5,16 @@ import router from './routes/index.js';
 import db from './models/index.js';
 import http from 'http';
 import { Server } from 'socket.io';
+import fs from 'fs';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // ✅ Middleware
 app.use(
