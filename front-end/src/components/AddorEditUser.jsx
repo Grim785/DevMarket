@@ -8,7 +8,7 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    role: 'user',
+    role: 'buyer',
     password: '',
   });
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
       setFormData({
         username: user.username || '',
         email: user.email || '',
-        role: user.role || 'user',
+        role: user.role || 'buyer',
         password: '', // password không show khi edit
       });
     }
@@ -117,7 +117,7 @@ const AddOrEditUser = ({ user, onSave, onCancel }) => {
             onChange={handleChange}
             className="border rounded px-3 py-2"
           >
-            <option value="user">User</option>
+            <option value="buyer">User</option>
             <option value="admin">Admin</option>
           </select>
           <div className="flex justify-end gap-2 mt-2">

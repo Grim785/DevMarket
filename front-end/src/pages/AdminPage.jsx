@@ -112,7 +112,9 @@ const AdminPage = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error('Failed to delete');
+      const data = await res.json(); // đọc JSON từ backend
+
+      if (!res.ok) throw new Error(data.message || 'Failed to delete');
       reloadTabData(type);
     } catch (err) {
       console.error(err);
