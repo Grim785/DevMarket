@@ -20,42 +20,41 @@ const CategoryPage = () => {
 
   // --- Fetch dữ liệu từ server ---
   useEffect(() => {
-    const fetchPlugins = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `${API_BASE}/categories/${slug}?page=${page}&limit=${limit}`
-        );
-        if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
-        const data = await res.json();
-        setCategoryName(data.category);
-        setPlugins(data.data || []);
-        setTotalPages(data.totalPages);
-      } catch (error) {
-        console.error('Error fetching category plugins:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPlugins();
   }, [slug, page]);
+
+  const fetchPlugins = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/categories/${slug}?page=${page}&limit=${limit}`
+      );
+      if (!res.ok) throw new Error('Lỗi khi tải dữ liệu.');
+      const data = await res.json();
+      setCategoryName(data.category);
+      setPlugins(data.data || []);
+      setTotalPages(data.totalPages);
+    } catch (error) {
+      console.error('Error fetching category plugins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- Real-time WebSocket ---
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewPlugin = (plugin) => {
-      if (plugin.category === slug) {
-        setPlugins((prev) => [plugin, ...prev]);
-      }
+    const handleNewPlugin = () => {
+      fetchPlugins();
     };
 
-    const handleDeletePlugin = (deletedPlugin) => {
-      setPlugins((prev) => prev.filter((p) => p.id !== deletedPlugin.id));
+    const handleDeletePlugin = () => {
+      fetchPlugins();
     };
 
-    const handleUpdatePlugin = (plugin) => {
-      setPlugins((prev) => prev.map((p) => (p.id === plugin.id ? plugin : p)));
+    const handleUpdatePlugin = () => {
+      fetchPlugins();
     };
 
     socket.on('newPlugin', handleNewPlugin);
@@ -134,35 +133,37 @@ const CategoryPage = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center items-center mt-6 space-x-4">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          disabled={page === 1}
-          className={`px-4 py-2 rounded-lg ${
-            page === 1
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          Prev
-        </button>
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center mt-6 space-x-4">
+          <button
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+            className={`px-4 py-2 rounded-lg ${
+              page === 1
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Prev
+          </button>
 
-        <span className="font-medium text-lg">
-          Page {page} / {totalPages}
-        </span>
+          <span className="font-medium text-lg">
+            Page {page} / {totalPages}
+          </span>
 
-        <button
-          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          disabled={page === totalPages}
-          className={`px-4 py-2 rounded-lg ${
-            page === totalPages
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          Next
-        </button>
-      </div>
+          <button
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+            className={`px-4 py-2 rounded-lg ${
+              page === totalPages
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

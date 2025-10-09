@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { io } from '../index.js'; // import io để emit
 import slugify from 'slugify';
+import { Op } from 'sequelize';
 
 const { Plugin, OrderItem, Order, Category } = db;
 
@@ -27,7 +28,11 @@ const pluginController = {
   // Lấy 1 plugin theo id
   fetchPlugin: async (req, res) => {
     try {
-      const plugin = await Plugin.findByPk(req.params.id);
+      const id = req.params.id;
+      const plugin = await Plugin.findByPk(id, {
+        include: [{ model: Category, as: 'category', attributes: ['name'] }],
+      });
+
       if (!plugin) {
         return res.status(404).json({ message: 'Plugin not found' });
       }
@@ -41,31 +46,26 @@ const pluginController = {
   // Lấy tất cả plugin
   fetchAllPlugin: async (req, res) => {
     try {
-      const page = parseInt(req.query.page);
-      const limit = parseInt(req.query.limit) || 6;
+      const { page = 1, limit = 6, search = '' } = req.query;
       const offset = (page - 1) * limit;
 
-      if (page) {
-        // Trả theo phân trang
-        const offset = (page - 1) * limit;
-        const { count, rows } = await Plugin.findAndCountAll({
-          limit,
-          offset,
-        });
-        res.json({
-          data: rows,
-          currentPage: page,
-          totalPages: Math.ceil(count / limit),
-          totalItems: count,
-        });
-      } else {
-        // Trả tất cả
-        const plugins = await Plugin.findAll();
-        res.json(plugins);
-      }
-    } catch (error) {
-      console.error('Error fetching plugins:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      const where = search ? { name: { [Op.like]: `%${search}%` } } : {};
+
+      const { count, rows } = await Plugin.findAndCountAll({
+        where,
+        include: [{ model: Category, as: 'category', attributes: ['name'] }],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['createdAt', 'DESC']],
+      });
+
+      res.json({
+        data: rows,
+        totalPages: Math.ceil(count / limit),
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error fetching plugins' });
     }
   },
 

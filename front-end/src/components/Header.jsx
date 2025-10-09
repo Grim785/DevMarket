@@ -16,11 +16,21 @@ function Header({ setIsOpen, headerRef }) {
 
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [keyword, setKeyword] = useState('');
 
   const handleLogout = () => {
     logout(); // gọi context để logout
     alert('Đăng xuất thành công!');
     navigate('/'); // chuyển về trang chủ
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!keyword.trim()) {
+      navigate('/');
+    } else {
+      navigate(`/?search=${encodeURIComponent(keyword)}`);
+    }
   };
 
   // Ẩn/hiện header khi scroll
@@ -63,14 +73,24 @@ function Header({ setIsOpen, headerRef }) {
 
         {/* Search */}
         <div className="flex items-center space-x-4 flex-1 md:order-2 order-last justify-center mx-5">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-3 max-w-lg"
-          />
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition duration-300">
-            <IoIosSearch className="text-xl" />
-          </button>
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center space-x-2 flex-1 justify-center"
+          >
+            <input
+              type="text"
+              placeholder="Search plugin..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="border border-gray-300 rounded-full px-4 py-2  w-full max-w-md"
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition"
+            >
+              <IoIosSearch className="text-xl" />
+            </button>
+          </form>
         </div>
 
         {/* User menu */}
@@ -79,7 +99,7 @@ function Header({ setIsOpen, headerRef }) {
             <div className="header-hover-effect rounded-md p-2">
               <Menu as="div" className="relative inline-block">
                 <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300 hover:bg-gray-50">
-                  Hello, {user.username}
+                  {user.username}
                   <ChevronDownIcon
                     aria-hidden="true"
                     className="-mr-1 size-5 text-gray-400"
@@ -126,7 +146,6 @@ function Header({ setIsOpen, headerRef }) {
               </Link>
             </div>
           )}
-          <div>EN</div>
           {user?.role !== 'admin' && (
             <Link to="/cart" className="text-blue-600 hover:underline">
               <BiCartDownload className="md:text-2xl text-xl" />

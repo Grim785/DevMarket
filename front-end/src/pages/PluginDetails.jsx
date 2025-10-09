@@ -174,17 +174,9 @@ function PluginDetails() {
           <p className="text-gray-600 mb-2">Updated At: {plugin.updatedAt}</p>
 
           <div className="mb-2">
-            <strong className="text-gray-700">Tags:</strong>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {plugin.tags?.map((tag, i) => (
-                <span
-                  key={i}
-                  className="bg-gray-200 text-sm text-gray-800 px-2 py-1 rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
+            <p className="text-gray-500">
+              Category: {plugin.category?.name || 'Uncategorized'}
+            </p>
           </div>
 
           <p className="text-gray-600 mb-2">
@@ -192,9 +184,7 @@ function PluginDetails() {
             {Number(plugin.price) === 0 ? 'Free' : `$${plugin.price}`}
           </p>
 
-          <p className="text-yellow-500 mb-2">
-            {'★'.repeat(Math.round(averageRating))} ({averageRating.toFixed(1)})
-          </p>
+          <p className="text-gray-500 mb-2">Downloads: {plugin.downloads}</p>
 
           <div className="flex items-center mb-4">
             {isUserLoggedIn ? (

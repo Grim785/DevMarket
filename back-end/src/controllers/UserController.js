@@ -61,6 +61,7 @@ const userController = {
       if (existingUsername) {
         return res.status(400).json({ message: 'Username already taken' });
       }
+
       const newUser = await User.create({ ...data });
       res.status(201).json(newUser);
     } catch (error) {
