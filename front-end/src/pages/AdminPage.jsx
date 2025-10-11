@@ -115,6 +115,7 @@ const AdminPage = () => {
       const data = await res.json(); // đọc JSON từ backend
 
       if (!res.ok) throw new Error(data.message || 'Failed to delete');
+      alert(data.message || 'Deleted successfully');
       reloadTabData(type);
     } catch (err) {
       console.error(err);
