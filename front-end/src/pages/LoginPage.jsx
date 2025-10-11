@@ -9,7 +9,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const API_BASE = import.meta.env.VITE_API_URL;
 
-  // Lấy login function từ context
   const { login } = useContext(AuthContext);
 
   useEffect(() => {
@@ -29,22 +28,22 @@ const LoginPage = () => {
       const data = await res.json();
 
       if (res.ok) {
-        // Cập nhật context và localStorage
+        // Update context and localStorage
         login(data.user, data.token);
 
-        alert('Đăng nhập thành công!');
+        alert('Login successful!');
 
-        // Điều hướng
+        // Redirect by role
         if (data.user.role === 'admin') {
           navigate('/admin');
         } else {
           navigate('/');
         }
       } else {
-        setError(data.message || 'Sai tài khoản hoặc mật khẩu');
+        setError(data.message || 'Invalid username or password');
       }
     } catch (err) {
-      setError('Lỗi kết nối đến server');
+      setError('Failed to connect to the server');
       console.error('Login error:', err);
     }
   };
@@ -55,13 +54,13 @@ const LoginPage = () => {
         onSubmit={handleLogin}
         className="bg-white p-6 rounded-xl shadow-md w-96"
       >
-        <h2 className="text-2xl font-bold mb-4">Đăng nhập</h2>
+        <h2 className="text-2xl font-bold mb-4">Login</h2>
 
         {error && <p className="text-red-500 mb-2">{error}</p>}
 
         <input
           type="text"
-          placeholder="Tài khoản"
+          placeholder="Username"
           className="w-full border p-2 mb-3 rounded"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -70,7 +69,7 @@ const LoginPage = () => {
 
         <input
           type="password"
-          placeholder="Mật khẩu"
+          placeholder="Password"
           className="w-full border p-2 mb-3 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -81,18 +80,18 @@ const LoginPage = () => {
           type="submit"
           className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
         >
-          Đăng nhập
+          Login
         </button>
 
         <p className="mt-4 text-sm text-gray-600">
-          Chưa có tài khoản?{' '}
+          Don’t have an account?{' '}
           <Link to="/signup" className="text-blue-500 hover:underline">
-            Đăng ký
+            Sign up
           </Link>
         </p>
         <p className="mt-2 text-sm text-gray-600">
           <Link to="/forgot-password" className="text-blue-500 hover:underline">
-            Quên mật khẩu?
+            Forgot password?
           </Link>
         </p>
       </form>

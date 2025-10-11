@@ -12,8 +12,8 @@ const PluginModal = ({ plugin }) => {
         src={
           plugin?.thumbnail
             ? plugin.thumbnail.startsWith('http')
-              ? plugin.thumbnail // đã là URL đầy đủ
-              : `${API_BASE}${plugin.thumbnail}` // prepend domain
+              ? plugin.thumbnail
+              : `${API_BASE}${plugin.thumbnail}`
             : 'https://microsoft.design/wp-content/uploads/2025/02/Waves-2.png'
         }
         alt={plugin?.name || 'Plugin Thumbnail'}

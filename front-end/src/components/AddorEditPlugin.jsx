@@ -8,6 +8,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isFile, setIsFile] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -140,7 +141,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
           <h2 className="text-xl font-semibold mb-2">
             {plugin ? 'Edit Plugin' : 'Add Plugin'}
           </h2>
-
           <input
             type="text"
             name="name"
@@ -150,7 +150,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             required
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-
           <textarea
             name="description"
             value={formData.description}
@@ -159,7 +158,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             required
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-
           <input
             type="text"
             name="version"
@@ -169,7 +167,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             required
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-
           <input
             type="number"
             name="price"
@@ -180,7 +177,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
             required
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-
           <select
             name="author"
             value={formData.author}
@@ -195,7 +191,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
               </option>
             ))}
           </select>
-
           <select
             name="categoryId"
             value={formData.categoryId}
@@ -210,7 +205,6 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
               </option>
             ))}
           </select>
-
           <div className="flex gap-2 items-center">
             {['pending', 'approved', 'rejected'].map((status) => (
               <label key={status} className="flex items-center gap-1">
@@ -226,20 +220,37 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
               </label>
             ))}
           </div>
-
           <input
             type="file"
             name="file"
             onChange={handleChange}
             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <input
-            type="file"
-            name="thumbnail"
-            onChange={handleChange}
-            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isFile}
+              onChange={() => setIsFile(!isFile)}
+            />
+            Upload thumbnail file
+          </label>
 
+          {isFile ? (
+            <input
+              type="file"
+              name="thumbnail"
+              onChange={handleChange}
+              className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          ) : (
+            <input
+              type="text"
+              name="thumbnail"
+              onChange={handleChange}
+              className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Thumbnail URL (or upload below)"
+            />
+          )}
           <div className="flex justify-end gap-2 mt-2">
             <button
               type="button"

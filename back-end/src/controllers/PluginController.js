@@ -164,15 +164,30 @@ const pluginController = {
   },
 
   //Thêm plugin
+  //Thêm plugin
   addPlugin: async (req, res) => {
     try {
-      const file = req.files['file']?.[0];
-      const thumbnail = req.files['thumbnail']?.[0];
-      if (!file || !thumbnail)
-        return res.status(400).json({ message: 'File và thumbnail bắt buộc' });
+      const file = req.files?.file?.[0];
+      const thumbnailFile = req.files?.thumbnail?.[0];
+      const { thumbnail: thumbnailText } = req.body;
+
+      if (!file) {
+        return res.status(400).json({ message: 'File plugin bắt buộc' });
+      }
+
+      // ✅ Cho phép thumbnail là URL hoặc file upload
+      let thumbnailUrl = '';
+      if (thumbnailFile) {
+        thumbnailUrl = `/uploads/${thumbnailFile.filename}`;
+      } else if (thumbnailText && thumbnailText.startsWith('http')) {
+        thumbnailUrl = thumbnailText;
+      } else {
+        return res
+          .status(400)
+          .json({ message: 'Thiếu thumbnail (URL hoặc file)' });
+      }
 
       const fileUrl = `/uploads/${file.filename}`;
-      const thumbnailUrl = `/uploads/${thumbnail.filename}`;
       const data = pickFields(req.body, [
         'name',
         'description',
@@ -183,17 +198,14 @@ const pluginController = {
         'userId',
       ]);
 
-      // ✅ Tạo slug gốc
+      // ✅ Tạo slug duy nhất
       let baseSlug = slugify(data.name, { lower: true, strict: true });
       let slug = baseSlug;
       let counter = 1;
-
-      // ✅ Kiểm tra trùng slug trong DB
       while (await Plugin.findOne({ where: { slug } })) {
         slug = `${baseSlug}-${counter++}`;
       }
 
-      // ✅ Tạo plugin mới
       const plugin = await Plugin.create({
         ...data,
         slug,
@@ -201,7 +213,6 @@ const pluginController = {
         thumbnail: thumbnailUrl,
       });
 
-      // 🔔 Emit real-time đến front-end
       const category = await Category.findByPk(plugin.categoryId);
       io.emit('newPlugin', {
         id: plugin.id,
