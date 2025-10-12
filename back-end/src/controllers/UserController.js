@@ -24,15 +24,40 @@ const userController = {
   // Lấy tất cả user
   fetchAllUser: async (req, res) => {
     try {
-      //kiểm tra admin
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-      const users = await User.findAll();
-      res.json(users);
+      const { page, limit } = req.query;
+
+      // Nếu không có page hoặc limit → lấy toàn bộ
+      if (!page || !limit) {
+        const allUsers = await User.findAll();
+        return res.json({
+          data: allUsers,
+          totalItems: allUsers.length,
+          totalPages: 1,
+        });
+      }
+
+      // Nếu có page + limit → phân trang
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const { count, rows } = await User.findAndCountAll({
+        limit: limitNum,
+        offset,
+        order: [['createdAt', 'DESC']],
+      });
+
+      return res.json({
+        data: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+      });
     } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
     }
   },
 

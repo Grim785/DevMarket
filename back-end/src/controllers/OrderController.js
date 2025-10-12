@@ -9,15 +9,37 @@ const orderController = {
       if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-      const orders = await Order.findAll({
-        include: ['plugins'], // nếu muốn kèm plugin
-        order: [['createdAt', 'DESC']], // sắp xếp mới nhất trước
-        // limit: 50, offset: 0 // nếu muốn phân trang
+      const { page, limit } = req.query;
+
+      // Nếu không có page hoặc limit → lấy toàn bộ
+      if (!page || !limit) {
+        const allOrders = await Order.findAll();
+        return res.json({
+          data: allOrders,
+          totalItems: allOrders.length,
+          totalPages: 1,
+        });
+      }
+
+      // Nếu có page + limit → phân trang
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const { count, rows } = await Order.findAndCountAll({
+        limit: limitNum,
+        offset,
+        order: [['createdAt', 'DESC']],
       });
 
-      return res.json({ orders });
+      return res.json({
+        data: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+      });
     } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
     }
   },
 

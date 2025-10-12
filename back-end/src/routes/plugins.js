@@ -19,7 +19,7 @@ const upload = multer({ storage });
 //lấy plugin theo id
 router.get('/fetchplugin/:id', pluginController.fetchPlugin);
 //lấy tất cả plugins
-router.get('/fetchAllplugin', pluginController.fetchAllPlugin);
+router.get('/fetchAllplugin', pluginController.fetchAllPlugins);
 //update plugin
 router.put(
   '/updateplugin/:id',

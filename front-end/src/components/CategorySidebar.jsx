@@ -15,7 +15,7 @@ const CategorySidebar = ({ isOpen, setIsOpen }) => {
     try {
       const res = await fetch(`${API_BASE}/categories/fetchAllCategories`);
       const data = await res.json();
-      setCategories(data);
+      setCategories(data.data);
     } catch (err) {
       console.error(err);
     }

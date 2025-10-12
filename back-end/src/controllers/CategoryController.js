@@ -1,15 +1,42 @@
 import db from '../models/index.js';
 import { io } from '../index.js';
 import { Socket } from 'socket.io';
+import Category from '../models/category.js';
 const CategoryController = {
   // lấy tất cả category
   getAllCategories: async (req, res) => {
     try {
-      const categories = await db.Category.findAll();
-      res.json(categories);
+      const { page, limit } = req.query;
+
+      // Nếu không có page hoặc limit → lấy toàn bộ
+      if (!page || !limit) {
+        const allCategories = await Category.findAll();
+        return res.json({
+          data: allCategories,
+          totalItems: allCategories.length,
+          totalPages: 1,
+        });
+      }
+
+      // Nếu có page + limit → phân trang
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const { count, rows } = await Category.findAndCountAll({
+        limit: limitNum,
+        offset,
+        order: [['createdAt', 'DESC']],
+      });
+
+      return res.json({
+        data: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+      });
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
     }
   },
 

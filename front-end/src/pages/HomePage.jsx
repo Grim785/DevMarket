@@ -38,7 +38,7 @@ const HomePage = () => {
       setLoading(true);
       try {
         const url = keyword
-          ? `${API_BASE}/plugins/fetchAllplugin?search=${encodeURIComponent(
+          ? `${API_BASE}/plugins/fetchAllplugin?page=${page}&limit=${limit}&search=${encodeURIComponent(
               keyword
             )}`
           : `${API_BASE}/plugins/fetchAllplugin?page=${page}&limit=${limit}`;
@@ -66,6 +66,11 @@ const HomePage = () => {
 
     fetchPlugins();
   }, [page, keyword]);
+
+  useEffect(() => {
+    // Khi từ khóa tìm kiếm thay đổi → về trang 1
+    setPage(1);
+  }, [keyword]);
 
   // --- Real-time cập nhật với Socket.IO ---
   useEffect(() => {

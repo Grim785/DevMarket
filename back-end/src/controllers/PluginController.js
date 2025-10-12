@@ -5,6 +5,7 @@ import path from 'path';
 import { io } from '../index.js'; // import io để emit
 import slugify from 'slugify';
 import { Op } from 'sequelize';
+import { console } from 'inspector';
 
 const { Plugin, OrderItem, Order, Category } = db;
 
@@ -44,24 +45,39 @@ const pluginController = {
   },
 
   // Lấy tất cả plugin
-  fetchAllPlugin: async (req, res) => {
+  fetchAllPlugins: async (req, res) => {
     try {
-      const { page = 1, limit = 6, search = '' } = req.query;
-      const offset = (page - 1) * limit;
+      const { page, limit, search } = req.query;
 
       const where = search ? { name: { [Op.like]: `%${search}%` } } : {};
+
+      // Nếu không có page hoặc limit → lấy toàn bộ
+      if (!page && !limit && !search) {
+        const allPlugins = await Plugin.findAll();
+        return res.json({
+          data: allPlugins,
+          totalItems: allPlugins.length,
+          totalPages: 1,
+        });
+      }
+
+      // Nếu có page + limit → phân trang
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 6;
+      const offset = (pageNum - 1) * limitNum;
 
       const { count, rows } = await Plugin.findAndCountAll({
         where,
         include: [{ model: Category, as: 'category', attributes: ['name'] }],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        limit: limitNum,
+        offset,
         order: [['createdAt', 'DESC']],
       });
 
-      res.json({
+      return res.json({
         data: rows,
-        totalPages: Math.ceil(count / limit),
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
       });
     } catch (err) {
       console.error(err);

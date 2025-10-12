@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, use } from 'react';
 import AddOrEditPlugin from '../components/AddorEditPlugin';
 import AddOrEditUser from '../components/AddorEditUser';
 import AddOrEditCategory from '../components/AddorEditCategory';
@@ -18,8 +18,10 @@ const AdminPage = () => {
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
-
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const limit = 6;
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -57,6 +59,7 @@ const AdminPage = () => {
       if (key && Array.isArray(result[key])) setter(result[key]);
       else if (Array.isArray(result)) setter(result);
       else setter([]);
+      setTotalPages(result.totalPages || 1);
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -70,22 +73,52 @@ const AdminPage = () => {
   // Initial fetch
   // =======================
   useEffect(() => {
-    fetchData('/plugins/fetchAllplugin', setPlugins);
-    fetchData('/users/fetchAllusers', setUsers);
-    fetchData('/orders/fetchAllOrders', setOrders, 'orders');
-    fetchData('/categories/fetchAllCategories', setCategories);
-  }, []);
+    switch (activeTab) {
+      case 'plugins':
+        fetchData(
+          `/plugins/fetchAllplugin?page=${page}&limit=${limit}`,
+          setPlugins
+        );
+        break;
+      case 'users':
+        fetchData(`/users/fetchAllusers?page=${page}&limit=${limit}`, setUsers);
+        break;
+      case 'orders':
+        fetchData(
+          `/orders/fetchAllOrders?page=${page}&limit=${limit}`,
+          setOrders
+        );
+        break;
+      case 'categories':
+        fetchData(
+          `/categories/fetchAllCategories?page=${page}&limit=${limit}`,
+          setCategories
+        );
+        break;
+    }
+  }, [page, activeTab]);
+
+  useEffect(() => {
+    setPage(1); // reset về trang 1 khi đổi tab
+  }, [activeTab]);
 
   // =======================
   // Socket updates
   // =======================
   useEffect(() => {
     if (!socket) return;
-    const handleNewUser = () => fetchData('/users/fetchAllusers', setUsers);
+    const handleNewUser = () =>
+      fetchData(`/users/fetchAllusers?page=${page}&limit=${limit}`, setUsers);
     const handleNewOrder = () =>
-      fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+      fetchData(
+        `/orders/fetchAllOrders?page=${page}&limit=${limit}`,
+        setOrders
+      );
     const handleUpdateOrder = () =>
-      fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+      fetchData(
+        `/orders/fetchAllOrders?page=${page}&limit=${limit}`,
+        setOrders
+      );
 
     socket.on('newUser', handleNewUser);
     socket.on('newOrder', handleNewOrder);
@@ -142,16 +175,25 @@ const AdminPage = () => {
   const reloadTabData = (tab) => {
     switch (tab) {
       case 'plugins':
-        fetchData('/plugins/fetchAllplugin', setPlugins);
+        fetchData(
+          `/plugins/fetchAllplugin?page=${page}&limit=${limit}`,
+          setPlugins
+        );
         break;
       case 'users':
-        fetchData('/users/fetchAllusers', setUsers);
+        fetchData(`/users/fetchAllusers?page=${page}&limit=${limit}`, setUsers);
         break;
       case 'orders':
-        fetchData('/orders/fetchAllOrders', setOrders, 'orders');
+        fetchData(
+          `/orders/fetchAllOrders?page=${page}&limit=${limit}`,
+          setOrders
+        );
         break;
       case 'categories':
-        fetchData('/categories/fetchAllCategories', setCategories);
+        fetchData(
+          `/categories/fetchAllCategories?page=${page}&limit=${limit}`,
+          setCategories
+        );
         break;
       default:
         break;
@@ -287,6 +329,38 @@ const AdminPage = () => {
             )}
           </tbody>
         </table>
+
+        {!loading && totalPages > 0 && (
+          <div className="flex justify-center items-center mt-6 space-x-4">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+              className={`px-4 py-2 rounded-lg ${
+                page === 1
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Prev
+            </button>
+
+            <span className="font-medium text-lg">
+              Page {page} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+              className={`px-4 py-2 rounded-lg ${
+                page === totalPages
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
 
       {isOpen && activeTab === 'plugins' && (

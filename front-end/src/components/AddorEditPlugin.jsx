@@ -32,7 +32,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setCategories(data);
+        setCategories(data.data);
       } catch (err) {
         console.error('Error fetching categories:', err);
       }
@@ -44,7 +44,7 @@ const AddOrEditPlugin = ({ plugin, onSave, onCancel }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setUsers(data);
+        setUsers(data.data);
       } catch (err) {
         console.error('Error fetching users:', err);
       }
